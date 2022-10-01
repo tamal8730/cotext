@@ -12,7 +12,7 @@ public class DocState {
 
     private final DocumentFormatter documentFormatter;
 
-    private int revision = 0;
+    private long revision = 0;
 
     final List<TextOperation> revisionLog = new ArrayList<>();
     final Queue<TextOperationTransient> pendingOperations = new LinkedList<>();
@@ -25,7 +25,7 @@ public class DocState {
         return revisionLog;
     }
 
-    public int getRevision() {
+    public long getRevision() {
         return revision;
     }
 

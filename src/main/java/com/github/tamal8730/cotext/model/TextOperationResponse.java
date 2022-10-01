@@ -4,9 +4,9 @@ public class TextOperationResponse {
 
     private String acknowledgeTo;
     private TextOperation operation;
-    private int revision;
+    private long revision;
 
-    public TextOperationResponse(String acknowledgeTo, TextOperation operation, int revision) {
+    public TextOperationResponse(String acknowledgeTo, TextOperation operation, long revision) {
         this.acknowledgeTo = acknowledgeTo;
         this.operation = operation;
         this.revision = revision;
@@ -31,7 +31,7 @@ public class TextOperationResponse {
         this.operation = operation;
     }
 
-    public int getRevision() {
+    public long getRevision() {
         return revision;
     }
 

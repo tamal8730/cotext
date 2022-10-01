@@ -35,6 +35,16 @@ class Queue {
     get isEmpty() {
         return this.length === 0;
     }
+
+    replaceWhere(where) {
+        for (let i = this.tail - 1; i >= this.head; i--) {
+            let newElement = where(this.elements[i])
+            if (newElement !== null) {
+                this.elements[i] = newElement
+            }
+        }
+    }
+
 }
 
 
@@ -87,6 +97,56 @@ class DocState {
 
     }
 
+    transformPendingOperations(op1, newRevision) {
+
+        let op1Name = op1.opName
+
+        this.pendingOperations.replaceWhere((op2) => {
+
+            let op2Name = op2.opName
+
+            if (op1Name == "ins" && op2Name == "ins") return this.transformII(op1, op2)
+            else if (op1Name == "ins" && op2Name == "del") return this.transformID(op1, op2)
+            else if (op1Name == "del" && op2Name == "ins") return this.transformDI(op1, op2)
+            else if (op1Name == "del" && op2Name == "del") return this.transformDD(op1, op2)
+            else return null
+
+        })
+    }
+
+    // insert-insert transform
+    transformII(op1, op2) {
+        if (op1.position < op2.position) return new TextOperation(op1.opName, op1.operand, op1.position)
+        else return new TextOperation(op1.opName, op1.operand, op1.position + 1)
+    }
+
+
+    // insert-delete
+    transformID(op1, op2) {
+        let newPos = 0
+        if (op1.position <= op2.position) newPos = op1.position
+        else newPos = op1.position - 1
+        return new TextOperation(op1.opName, op1.operand, newPos)
+    }
+
+    // delete-insert
+    transformDI(op1, op2) {
+        let newPos = 0
+        if (op1.position < op2.position) newPos = op1.position
+        else newPos = op1.position + 1
+        return new TextOperation(op1.opName, op1.operand, newPos)
+    }
+
+    // delete-delete
+    transformDD(op1, op2) {
+        let newPos = 0
+        if (op1.position < op2.position) newPos = op1.position
+        else if (op1.position > op2.position) newPos = op1.position - 1
+        else return null
+        return new TextOperation(op1.opName, op1.operand, newPos)
+    }
+
+
 }
 
 
@@ -135,6 +195,7 @@ function onOperationAcknowledged(operation, revision) {
     )
 }
 
+
 function subscribeToDocumentUpdates(docId) {
 
     client.subscribe(`/topic/doc/${docId}`, function (message) {
@@ -152,6 +213,8 @@ function subscribeToDocumentUpdates(docId) {
             onOperationAcknowledged(operation, revision)
 
         } else {
+
+            docState.transformPendingOperations(operation, revision)
 
             if (operation.opName === "ins") {
                 onInsert(operation.operand, operation.position, revision)

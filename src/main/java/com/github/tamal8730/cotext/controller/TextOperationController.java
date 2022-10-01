@@ -1,27 +1,30 @@
 package com.github.tamal8730.cotext.controller;
 
-import com.github.tamal8730.cotext.model.DocStore;
-import com.github.tamal8730.cotext.model.TextOperation;
+import com.github.tamal8730.cotext.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+@RestController
 @CrossOrigin
 public class TextOperationController {
 
     @Autowired
-    private DocStore docStore;
+    private DocStateStore docStateStore;
+
 
     @MessageMapping("/relay/{id}")
     @SendTo("/topic/doc/{id}")
-    private TextOperation relayOperation(@DestinationVariable String id, TextOperation operation) throws Exception {
-        Thread.sleep(500);
-        return operation;
+    private TextOperationResponse relayOperation(@DestinationVariable String id, TextOperationTransient operation) throws Exception {
+        DocState state = docStateStore.getDocState(id);
+        state.addPendingOperation(operation);
+        // TODO: operate
+        state.applyCurrentOperation();
+        return new TextOperationResponse(operation.getFrom(), operation.getOperation(), state.getRevision());
     }
-
 
 }

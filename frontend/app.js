@@ -3,9 +3,103 @@ let httpProtocol = "http"
 let wsProtocol = "ws"
 
 let client = null
-let docID = null
+let docId = null
 let prevText = ""
 let currText = ""
+let userId = null
+
+
+
+class Queue {
+    constructor() {
+        this.elements = {};
+        this.head = 0;
+        this.tail = 0;
+    }
+    enqueue(element) {
+        this.elements[this.tail] = element;
+        this.tail++;
+    }
+    dequeue() {
+        const item = this.elements[this.head];
+        delete this.elements[this.head];
+        this.head++;
+        return item;
+    }
+    peek() {
+        return this.elements[this.head];
+    }
+    get length() {
+        return this.tail - this.head;
+    }
+    get isEmpty() {
+        return this.length === 0;
+    }
+}
+
+
+class TextOperation {
+
+    constructor(opName, operand, position) {
+        this.opName = opName
+        this.operand = operand
+        this.position = position
+    }
+
+}
+
+
+
+class DocState {
+
+    constructor(onDocumentChange) {
+        this.onDocumentChange = onDocumentChange
+        this.sentOperations = new Queue() // operations sent to server but not yet acknowledged
+        this.pendingOperations = new Queue() // operations not yet sent to server
+    }
+
+    lastSyncedRevision = 0
+    document = ""
+
+    acknowledgeOperation(operation, newRevision, onPendingOperation) {
+        // remove sent operation
+        this.sentOperations.dequeue()
+
+        // take out a pending operation
+        if (!this.pendingOperations.isEmpty) {
+            onPendingOperation(this.pendingOperations.dequeue())
+        }
+
+        this.lastSyncedRevision = newRevision
+
+    }
+
+    queueOperation(operation, newDocument, onSend) {
+
+        if (this.sentOperations.isEmpty) {
+            onSend(this.lastSyncedRevision)
+            this.sentOperations.enqueue(operation)
+        } else {
+            this.pendingOperations.enqueue(operation)
+        }
+
+        this.document = newDocument(this.document)
+
+    }
+
+}
+
+
+
+
+let docState = new DocState((newDoc) => {
+    document.getElementById("editor").value = newDoc
+})
+
+
+
+
+
 
 function getCaretPosition(textarea) {
     if (document.selection) {
@@ -32,58 +126,85 @@ function getCaretPosition(textarea) {
     }
 }
 
+
+function onOperationAcknowledged(operation, revision) {
+    docState.acknowledgeOperation(
+        operation,
+        revision,
+        (pendingOperation) => sendOperation(pendingOperation)
+    )
+}
+
+function subscribeToDocumentUpdates(docId) {
+
+    client.subscribe(`/topic/doc/${docId}`, function (message) {
+
+        let body = message.body;
+        let parsed = JSON.parse(body);
+        console.log(`Received doc ${body}`)
+
+        let ack = parsed.acknowledgeTo
+        let operation = parsed.operation
+        let revision = parsed.revision
+
+        if (ack === userId) {
+
+            onOperationAcknowledged(operation, revision)
+
+        } else {
+
+            if (operation.opName === "ins") {
+                onInsert(operation.operand, operation.position, revision)
+            } else if (operation.opName === "del") {
+                onDelete(operation.operand, operation.position, revision)
+            }
+
+        }
+
+    })
+
+}
+
+async function onNewDocument() {
+
+    let response = await axios.get(`${httpProtocol}://${server}/doc/create`)
+    let data = response.data
+    docId = data.docId
+    userId = data.userId
+
+    document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
+    subscribeToDocumentUpdates(docId)
+
+    console.log(`New doc ${docId}`)
+
+}
+
+async function onDocumentJoin(id) {
+
+    console.log(`joining ${id}`)
+    let response = await axios.get(`${httpProtocol}://${server}/doc/${id}`)
+    let data = response.data
+    docId = id
+    userId = data.userId
+    let content = data.text || ""
+
+    document.getElementById("editor").value = content
+    document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
+
+    subscribeToDocumentUpdates(docId)
+
+}
+
 async function onConnect(client) {
 
     let currUrl = window.location.search
     let url = new URLSearchParams(currUrl)
     let id = url.get("id")
     if (!id) {
-        // new document
-        let response = await axios.get(`${httpProtocol}://${server}/doc/create`)
-        let data = response.data
-        docID = data.id
-
-        document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docID}`
-
-        client.subscribe(`/topic/doc/${docID}`, function (message) {
-            let body = message.body;
-            let parsed = JSON.parse(body);
-            console.log(`Received doc ${body}`)
-            if (parsed.opName === "ins") {
-                onInsert(parsed.operand, parsed.position)
-            } else if (parsed.opName === "del") {
-                onDelete(parsed.operand, parsed.position)
-            }
-            // document.getElementById("editor").value = parsed.content
-        })
-
-        console.log(`New doc ${docID}`)
-
+        await onNewDocument() // new document
     } else {
-        // join document with id=id
-        console.log(`joining ${id}`)
-        let response = await axios.get(`${httpProtocol}://${server}/doc/${id}`)
-        let data = response.data
-        docID = data.id
-        let content = data.content || ""
-
-        document.getElementById("editor").value = content
-        document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docID}`
-
-        client.subscribe(`/topic/doc/${docID}`, function (message) {
-            let body = message.body;
-            let parsed = JSON.parse(body);
-            console.log(`Received doc ${body}`)
-            if (parsed.opName === "ins") {
-                onInsert(parsed.operand, parsed.position)
-            } else if (parsed.opName === "del") {
-                onDelete(parsed.operand, parsed.position)
-            }
-            // document.getElementById("editor").value = parsed.content
-        })
-
+        await onDocumentJoin(id) // join document with id=id
     }
-
 
 }
 
@@ -94,9 +215,7 @@ function connectOrJoin() {
     console.log(`Trying to connect to ${url}`)
 
     client = Stomp.client(url)
-    client.connect({}, function () {
-        onConnect(client)
-    })
+    client.connect({}, function () { onConnect(client) })
 
 }
 
@@ -109,14 +228,76 @@ function onChangeText() {
         sendDeleteOperation(start, prevText.substring(start, start + 1))
     }
     prevText = text
+
+}
+
+function sendOperation(operation) {
+
+    if (operation.opName === "ins") {
+
+        docState.queueOperation(
+            operation,
+            (currDoc) => insertStr(currDoc, operation.operand, operation.position),
+            (lastSyncedRevision) => {
+                axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+                    {
+                        'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
+                        'revision': lastSyncedRevision, 'from': userId
+                    },
+                    {
+                        headers: { 'Content-Type': 'application/json' }
+                    }
+                )
+            }
+            // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
+        )
+
+    } else if (operation.opName === "del") {
+
+        docState.queueOperation(
+            operation,
+            (currDoc) => removeCharacter(currDoc, operation.position),
+            (lastSyncedRevision) => { axios.post(`${httpProtocol}://${server}/send/message/${docId}`, { 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId }) }
+            // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
+        )
+
+    } else {
+
+    }
+
 }
 
 function sendInsertOperation(caretPosition, substring) {
-    client.send(`/app/relay/${docID}`, {}, JSON.stringify({ 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 }))
+
+    docState.queueOperation(
+        new TextOperation("ins", substring, caretPosition - 1),
+        (currDoc) => insertStr(currDoc, substring, caretPosition - 1),
+        (lastSyncedRevision) => {
+            axios.post(
+                `${httpProtocol}://${server}/send/message/${docId}`,
+                {
+                    'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 },
+                    'revision': lastSyncedRevision, 'from': userId
+                },
+                {
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            )
+        }
+        // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 }, 'revision': lastSyncedRevision, 'from': userId })) }
+    )
+
 }
 
 function sendDeleteOperation(caretPosition, substring) {
-    client.send(`/app/relay/${docID}`, {}, JSON.stringify({ 'opName': 'del', 'operand': substring, 'position': caretPosition }))
+
+    docState.queueOperation(
+        new TextOperation("del", substring, caretPosition),
+        (currDoc) => removeCharacter(currDoc, caretPosition),
+        (lastSyncedRevision) => { axios.post(`${httpProtocol}://${server}/send/message/${docId}`, { 'operation': { 'opName': 'del', 'operand': substring, 'position': caretPosition }, 'revision': lastSyncedRevision, 'from': userId }) }
+        // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition }, 'revision': lastSyncedRevision, 'from': userId })) }
+    )
+
 }
 
 function insertStr(main_string, ins_string, pos) {
@@ -135,12 +316,12 @@ function removeCharacter(str, char_pos) {
     return (part1 + part2);
 }
 
-function onInsert(charSequence, position) {
-    currText = insertStr(currText, charSequence, position)
+function onInsert(charSequence, position, revision) {
+    docState.document = insertStr(docState.document, charSequence, position)
     document.getElementById("editor").value = currText
 }
 
-function onDelete(charSequence, position) {
+function onDelete(charSequence, position, revision) {
     currText = removeCharacter(currText, position)
     document.getElementById("editor").value = currText
 }

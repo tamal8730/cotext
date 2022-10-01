@@ -1,6 +1,9 @@
 package com.github.tamal8730.cotext;
 
-import com.github.tamal8730.cotext.model.DocStore;
+import com.github.tamal8730.cotext.config.HttpHandshakeInterceptor;
+import com.github.tamal8730.cotext.document_formatter.DocumentFormatter;
+import com.github.tamal8730.cotext.document_formatter.impl.DocumentFormatterImpl;
+import com.github.tamal8730.cotext.model.DocStateStore;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -9,8 +12,17 @@ import org.springframework.context.annotation.Bean;
 public class CotextApplication {
 
     @Bean
-    public DocStore getDocStore() {
-        return new DocStore();
+    public HttpHandshakeInterceptor getHttpHandshakeInterceptor(){
+        return new HttpHandshakeInterceptor();
+    }
+
+    @Bean
+    public DocStateStore getDocStateStore(){
+        return new DocStateStore();
+    }
+
+    public DocumentFormatter getDocumentFormatter(){
+        return new DocumentFormatterImpl();
     }
 
     public static void main(String[] args) {

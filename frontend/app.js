@@ -74,16 +74,16 @@ class DocState {
 
     }
 
-    queueOperation(operation, newDocument, onSend) {
+    async queueOperation(operation, newDocument, onSend) {
+
+        this.document = newDocument(this.document)
 
         if (this.sentOperations.isEmpty) {
-            onSend(this.lastSyncedRevision)
+            await onSend(this.lastSyncedRevision)
             this.sentOperations.enqueue(operation)
         } else {
             this.pendingOperations.enqueue(operation)
         }
-
-        this.document = newDocument(this.document)
 
     }
 
@@ -186,9 +186,10 @@ async function onDocumentJoin(id) {
     let data = response.data
     docId = id
     userId = data.userId
-    let content = data.text || ""
+    docState.document = data.text || ""
+    prevText = docState.document
 
-    document.getElementById("editor").value = content
+    document.getElementById("editor").value = docState.document
     document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
 
     subscribeToDocumentUpdates(docId)
@@ -238,14 +239,11 @@ function sendOperation(operation) {
         docState.queueOperation(
             operation,
             (currDoc) => insertStr(currDoc, operation.operand, operation.position),
-            (lastSyncedRevision) => {
-                axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+            async (lastSyncedRevision) => {
+                await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
                     {
                         'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
                         'revision': lastSyncedRevision, 'from': userId
-                    },
-                    {
-                        headers: { 'Content-Type': 'application/json' }
                     }
                 )
             }
@@ -257,7 +255,18 @@ function sendOperation(operation) {
         docState.queueOperation(
             operation,
             (currDoc) => removeCharacter(currDoc, operation.position),
-            (lastSyncedRevision) => { axios.post(`${httpProtocol}://${server}/send/message/${docId}`, { 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId }) }
+            async (lastSyncedRevision) => {
+                await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+                    {
+                        'operation': {
+                            'opName': operation.opName,
+                            'operand': operation.operand,
+                            'position': operation.position
+                        },
+                        'revision': lastSyncedRevision, 'from': userId
+                    }
+                )
+            }
             // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
         )
 
@@ -272,15 +281,12 @@ function sendInsertOperation(caretPosition, substring) {
     docState.queueOperation(
         new TextOperation("ins", substring, caretPosition - 1),
         (currDoc) => insertStr(currDoc, substring, caretPosition - 1),
-        (lastSyncedRevision) => {
-            axios.post(
+        async (lastSyncedRevision) => {
+            await axios.post(
                 `${httpProtocol}://${server}/send/message/${docId}`,
                 {
                     'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 },
                     'revision': lastSyncedRevision, 'from': userId
-                },
-                {
-                    headers: { 'Content-Type': 'application/json' }
                 }
             )
         }
@@ -294,7 +300,14 @@ function sendDeleteOperation(caretPosition, substring) {
     docState.queueOperation(
         new TextOperation("del", substring, caretPosition),
         (currDoc) => removeCharacter(currDoc, caretPosition),
-        (lastSyncedRevision) => { axios.post(`${httpProtocol}://${server}/send/message/${docId}`, { 'operation': { 'opName': 'del', 'operand': substring, 'position': caretPosition }, 'revision': lastSyncedRevision, 'from': userId }) }
+        async (lastSyncedRevision) => {
+            await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+                {
+                    'operation': { 'opName': 'del', 'operand': substring, 'position': caretPosition },
+                    'revision': lastSyncedRevision, 'from': userId
+                }
+            )
+        }
         // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition }, 'revision': lastSyncedRevision, 'from': userId })) }
     )
 
@@ -318,12 +331,14 @@ function removeCharacter(str, char_pos) {
 
 function onInsert(charSequence, position, revision) {
     docState.document = insertStr(docState.document, charSequence, position)
-    document.getElementById("editor").value = currText
+    document.getElementById("editor").value = docState.document
+    prevText = docState.document
 }
 
 function onDelete(charSequence, position, revision) {
-    currText = removeCharacter(currText, position)
-    document.getElementById("editor").value = currText
+    docState.document = removeCharacter(docState.document, position)
+    document.getElementById("editor").value = docState.document
+    prevText = docState.document
 }
 
 connectOrJoin()

@@ -12,18 +12,15 @@ import org.springframework.context.annotation.Bean;
 public class CotextApplication {
 
     @Bean
-    public HttpHandshakeInterceptor getHttpHandshakeInterceptor(){
+    public HttpHandshakeInterceptor getHttpHandshakeInterceptor() {
         return new HttpHandshakeInterceptor();
     }
 
     @Bean
-    public DocStateStore getDocStateStore(){
-        return new DocStateStore();
+    public DocStateStore getDocStateStore() {
+        return new DocStateStore(DocumentFormatterImpl::new);
     }
 
-    public DocumentFormatter getDocumentFormatter(){
-        return new DocumentFormatterImpl();
-    }
 
     public static void main(String[] args) {
         SpringApplication.run(CotextApplication.class, args);

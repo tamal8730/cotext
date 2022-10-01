@@ -1,7 +1,6 @@
 package com.github.tamal8730.cotext.model;
 
 import com.github.tamal8730.cotext.document_formatter.DocumentFormatter;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -10,16 +9,16 @@ import java.util.Queue;
 
 public class DocState {
 
-    @Autowired
-    private DocumentFormatter documentFormatter;
+
+    private final DocumentFormatter documentFormatter;
 
     private int revision = 0;
 
     final List<TextOperation> revisionLog = new ArrayList<>();
     final Queue<TextOperationTransient> pendingOperations = new LinkedList<>();
-    private String docText = "";
 
-    public DocState() {
+    public DocState(DocumentFormatter documentFormatter) {
+        this.documentFormatter = documentFormatter;
     }
 
     public List<TextOperation> getRevisionLog() {
@@ -31,7 +30,7 @@ public class DocState {
     }
 
     public String getDocText() {
-        return docText;
+        return documentFormatter.getText();
     }
 
     public void addPendingOperation(TextOperationTransient operation) {
@@ -41,7 +40,7 @@ public class DocState {
     public void applyCurrentOperation() {
         TextOperationTransient operation = pendingOperations.poll();
         if (operation == null) return;
-        docText = documentFormatter.applyOperation(operation.getOperation());
+        documentFormatter.applyOperation(operation.getOperation());
         revisionLog.add(operation.getOperation());
         revision++;
     }

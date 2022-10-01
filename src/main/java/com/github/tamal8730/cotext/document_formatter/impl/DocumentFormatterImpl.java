@@ -25,6 +25,7 @@ public class DocumentFormatterImpl implements DocumentFormatter {
     }
 
     private String applyInsert(TextOperation operation) {
+        System.out.println("OP " + operation + ", TEXT " + buffer);
         if (buffer.length() == operation.getPosition()) {
             buffer.append(operation.getOperand());
         } else {
@@ -34,6 +35,7 @@ public class DocumentFormatterImpl implements DocumentFormatter {
     }
 
     private String applyRemoveChar(TextOperation operation) {
+        System.out.println("OP " + operation + ", TEXT " + buffer);
         buffer.deleteCharAt(operation.getPosition());
         return buffer.toString();
     }

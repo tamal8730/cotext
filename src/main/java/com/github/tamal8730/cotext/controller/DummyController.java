@@ -20,14 +20,12 @@ public class DummyController {
     private DocStateStore docStateStore;
 
     @Autowired
-    @Qualifier("kafkaTemplate")
     private KafkaTemplate<String, KafkaMessageModel> kafkaTemplate;
 
     @PostMapping("/message/{id}")
     private String send(@PathVariable String id, @RequestBody TextOperationTransient operation) throws Exception {
         Thread.sleep(5000);
         DocState state = docStateStore.getDocState(id);
-        state.addPendingOperation(operation);
         kafkaTemplate.send("docs", new KafkaMessageModel(id, operation));
         return "OK";
     }

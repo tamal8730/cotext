@@ -4,8 +4,6 @@ let wsProtocol = "ws"
 
 let client = null
 let docId = null
-let prevText = ""
-let currText = ""
 let userId = null
 
 
@@ -50,10 +48,11 @@ class Queue {
 
 class TextOperation {
 
-    constructor(opName, operand, position) {
+    constructor(opName, operand, position, revision) {
         this.opName = opName
         this.operand = operand
         this.position = position
+        this.revision = revision
     }
 
 }
@@ -64,46 +63,59 @@ class DocState {
 
     constructor(onDocumentChange) {
         this.onDocumentChange = onDocumentChange
-        this.sentOperations = new Queue() // operations sent to server but not yet acknowledged
+        this.sentOperation = null // operation sent to server but not yet acknowledged
         this.pendingOperations = new Queue() // operations not yet sent to server
     }
 
     lastSyncedRevision = 0
     document = ""
+    prevText = ""
 
     acknowledgeOperation(operation, newRevision, onPendingOperation) {
         // remove sent operation
-        this.sentOperations.dequeue()
+        this.sentOperation = null
+        this.lastSyncedRevision = newRevision
 
         // take out a pending operation
         if (!this.pendingOperations.isEmpty) {
-            onPendingOperation(this.pendingOperations.dequeue())
+            this.sentOperation = this.pendingOperations.dequeue()
+            onPendingOperation(this.sentOperation)
         }
-
-        this.lastSyncedRevision = newRevision
 
     }
 
-    async queueOperation(operation, newDocument, onSend) {
+    setDocumentText(text) {
+        this.prevText = this.document
+        this.document = text
+    }
 
-        this.document = newDocument(this.document)
+    queueOperation(operation, newDocument, onSend) {
 
-        if (this.sentOperations.isEmpty) {
-            await onSend(this.lastSyncedRevision)
-            this.sentOperations.enqueue(operation)
+        this.setDocumentText(newDocument(this.document))
+        console.log(`DOC ${this.document} ${this.sentOperation}`)
+
+        if (this.sentOperation === null) {
+            console.log(`SENT ${this.document}`)
+            onSend(operation.revision)
+            this.sentOperation = operation
         } else {
+            console.log(`QUEUED ${this.document}`)
             this.pendingOperations.enqueue(operation)
         }
 
     }
 
-    transformPendingOperations(op1, newRevision) {
+    transformPendingOperations(op2, newRevision) {
 
-        let op1Name = op1.opName
+        if (op2 === null) {
+            return
+        }
 
-        this.pendingOperations.replaceWhere((op2) => {
+        let op2Name = op2.opName
 
-            let op2Name = op2.opName
+        this.pendingOperations.replaceWhere((op1) => {
+
+            let op1Name = op1.opName
 
             if (op1Name == "ins" && op2Name == "ins") return this.transformII(op1, op2)
             else if (op1Name == "ins" && op2Name == "del") return this.transformID(op1, op2)
@@ -117,7 +129,7 @@ class DocState {
     // insert-insert transform
     transformII(op1, op2) {
         if (op1.position < op2.position) return new TextOperation(op1.opName, op1.operand, op1.position)
-        else return new TextOperation(op1.opName, op1.operand, op1.position + 1)
+        else return new TextOperation(op1.opName, op1.operand, op1.position + 1, op1.revision)
     }
 
 
@@ -126,7 +138,7 @@ class DocState {
         let newPos = 0
         if (op1.position <= op2.position) newPos = op1.position
         else newPos = op1.position - 1
-        return new TextOperation(op1.opName, op1.operand, newPos)
+        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision)
     }
 
     // delete-insert
@@ -134,7 +146,7 @@ class DocState {
         let newPos = 0
         if (op1.position < op2.position) newPos = op1.position
         else newPos = op1.position + 1
-        return new TextOperation(op1.opName, op1.operand, newPos)
+        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision)
     }
 
     // delete-delete
@@ -143,7 +155,7 @@ class DocState {
         if (op1.position < op2.position) newPos = op1.position
         else if (op1.position > op2.position) newPos = op1.position - 1
         else return null
-        return new TextOperation(op1.opName, op1.operand, newPos)
+        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision)
     }
 
 
@@ -188,11 +200,16 @@ function getCaretPosition(textarea) {
 
 
 function onOperationAcknowledged(operation, revision) {
-    docState.acknowledgeOperation(
-        operation,
-        revision,
-        (pendingOperation) => sendOperation(pendingOperation)
-    )
+    if (docState.lastSyncedRevision < revision) {
+        docState.acknowledgeOperation(
+            operation,
+            revision,
+            (pendingOperation) => {
+                console.log(`SENDING ${JSON.stringify(pendingOperation)}`)
+                sendOperation(pendingOperation)
+            }
+        )
+    }
 }
 
 
@@ -212,9 +229,10 @@ function subscribeToDocumentUpdates(docId) {
 
             onOperationAcknowledged(operation, revision)
 
-        } else {
+        } else if (operation !== null) {
 
             docState.transformPendingOperations(operation, revision)
+            docState.lastSyncedRevision = revision
 
             if (operation.opName === "ins") {
                 onInsert(operation.operand, operation.position, revision)
@@ -249,8 +267,7 @@ async function onDocumentJoin(id) {
     let data = response.data
     docId = id
     userId = data.userId
-    docState.document = data.text || ""
-    prevText = docState.document
+    docState.setDocumentText(data.text || "")
 
     document.getElementById("editor").value = docState.document
     document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
@@ -284,14 +301,16 @@ function connectOrJoin() {
 }
 
 function onChangeText() {
-    let text = document.getElementById("editor").value
+
+    let currText = document.getElementById("editor").value
+    let prevText = docState.document
     let { start, end } = getCaretPosition(document.getElementById("editor"))
-    if (text.length > prevText.length) {
-        sendInsertOperation(start, text.substring(start - 1, start))
-    } else if (prevText.length > text.length) {
+
+    if (currText.length > prevText.length) {
+        sendInsertOperation(start, currText.substring(start - 1, start))
+    } else if (prevText.length > currText.length) {
         sendDeleteOperation(start, prevText.substring(start, start + 1))
     }
-    prevText = text
 
 }
 
@@ -299,39 +318,58 @@ function sendOperation(operation) {
 
     if (operation.opName === "ins") {
 
-        docState.queueOperation(
-            operation,
-            (currDoc) => insertStr(currDoc, operation.operand, operation.position),
-            async (lastSyncedRevision) => {
-                await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
-                    {
-                        'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
-                        'revision': lastSyncedRevision, 'from': userId
-                    }
-                )
+        axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+            {
+                'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
+                'revision': docState.lastSyncedRevision, 'from': userId
             }
-            // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
         )
+
+        // docState.queueOperation(
+        //     operation,
+        //     (currDoc) => currDoc,
+        //     async (revision) => {
+        //         await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+        //             {
+        //                 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
+        //                 'revision': revision, 'from': userId
+        //             }
+        //         )
+        //     }
+        //     // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
+        // )
 
     } else if (operation.opName === "del") {
 
-        docState.queueOperation(
-            operation,
-            (currDoc) => removeCharacter(currDoc, operation.position),
-            async (lastSyncedRevision) => {
-                await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
-                    {
-                        'operation': {
-                            'opName': operation.opName,
-                            'operand': operation.operand,
-                            'position': operation.position
-                        },
-                        'revision': lastSyncedRevision, 'from': userId
-                    }
-                )
+
+        axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+            {
+                'operation': {
+                    'opName': operation.opName,
+                    'operand': operation.operand,
+                    'position': operation.position
+                },
+                'revision': docState.lastSyncedRevision, 'from': userId
             }
-            // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
         )
+
+        // docState.queueOperation(
+        //     operation,
+        //     (currDoc) => currDoc,
+        //     async (revision) => {
+        //         await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+        //             {
+        //                 'operation': {
+        //                     'opName': operation.opName,
+        //                     'operand': operation.operand,
+        //                     'position': operation.position
+        //                 },
+        //                 'revision': revision, 'from': userId
+        //             }
+        //         )
+        //     }
+        //     // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
+        // )
 
     } else {
 
@@ -342,14 +380,14 @@ function sendOperation(operation) {
 function sendInsertOperation(caretPosition, substring) {
 
     docState.queueOperation(
-        new TextOperation("ins", substring, caretPosition - 1),
+        new TextOperation("ins", substring, caretPosition - 1, docState.lastSyncedRevision),
         (currDoc) => insertStr(currDoc, substring, caretPosition - 1),
-        async (lastSyncedRevision) => {
+        async (revision) => {
             await axios.post(
                 `${httpProtocol}://${server}/send/message/${docId}`,
                 {
                     'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 },
-                    'revision': lastSyncedRevision, 'from': userId
+                    'revision': revision, 'from': userId
                 }
             )
         }
@@ -361,13 +399,13 @@ function sendInsertOperation(caretPosition, substring) {
 function sendDeleteOperation(caretPosition, substring) {
 
     docState.queueOperation(
-        new TextOperation("del", substring, caretPosition),
+        new TextOperation("del", substring, caretPosition, docState.lastSyncedRevision),
         (currDoc) => removeCharacter(currDoc, caretPosition),
-        async (lastSyncedRevision) => {
+        async (revision) => {
             await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
                 {
                     'operation': { 'opName': 'del', 'operand': substring, 'position': caretPosition },
-                    'revision': lastSyncedRevision, 'from': userId
+                    'revision': revision, 'from': userId
                 }
             )
         }
@@ -393,15 +431,13 @@ function removeCharacter(str, char_pos) {
 }
 
 function onInsert(charSequence, position, revision) {
-    docState.document = insertStr(docState.document, charSequence, position)
+    docState.setDocumentText(insertStr(docState.document, charSequence, position))
     document.getElementById("editor").value = docState.document
-    prevText = docState.document
 }
 
 function onDelete(charSequence, position, revision) {
-    docState.document = removeCharacter(docState.document, position)
+    docState.setDocumentText(removeCharacter(docState.document, position))
     document.getElementById("editor").value = docState.document
-    prevText = docState.document
 }
 
 connectOrJoin()

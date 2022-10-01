@@ -2,7 +2,7 @@ package com.github.tamal8730.cotext.model;
 
 public class TextOperation {
 
-    private String opName; //ins, del
+    private String opName; //ins, del, id
     private String operand;
     private int position;
 
@@ -38,5 +38,14 @@ public class TextOperation {
 
     public void setPosition(int position) {
         this.position = position;
+    }
+
+    @Override
+    public String toString() {
+        return "TextOperation{" +
+                "opName='" + opName + '\'' +
+                ", operand='" + operand + '\'' +
+                ", position=" + position +
+                '}';
     }
 }

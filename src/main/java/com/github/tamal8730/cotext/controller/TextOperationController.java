@@ -21,9 +21,9 @@ public class TextOperationController {
     @SendTo("/topic/doc/{id}")
     private TextOperationResponse relayOperation(@DestinationVariable String id, TextOperationTransient operation) throws Exception {
         DocState state = docStateStore.getDocState(id);
-        state.addPendingOperation(operation);
+//        state.addPendingOperation(operation);
         // TODO: operate
-        state.applyCurrentOperation();
+//        state.applyCurrentOperation();
         return new TextOperationResponse(operation.getFrom(), operation.getOperation(), state.getRevision());
     }
 

@@ -25,13 +25,22 @@ public class KafkaMessageListener {
         int serverDocRevision = state.getRevision();
         int messageDocRevision = message.getTextOperationTransient().getRevision();
 
-        System.out.println("LIS " + message.getTextOperationTransient().getOperation() + ", S_V = " + state.getRevision() + ", M_V = " + messageDocRevision);
-
         if (messageDocRevision < serverDocRevision) {
+
             // client doc version is outdated
             // in this case, transform this message against all committed revisions after serverDocVersion
             TextOperation transformedOperation = state.applyTransformationsFrom(message.getTextOperationTransient().getOperation(), messageDocRevision);
-            if (transformedOperation == null) return;
+            System.out.printf(
+                    "[%s] clientRevision = %d, serverRevision = %d\n Transformed from = %s, to = %s\n",
+                    "OBSOLETE_MESSAGE",
+                    messageDocRevision,
+                    serverDocRevision,
+                    message.getTextOperationTransient().getOperation(),
+                    transformedOperation
+            );
+            if (transformedOperation == null) {
+                return;
+            }
             simpMessagingTemplate.convertAndSend("/topic/doc/" + message.getDocId()
                     , new TextOperationResponse(
                             message.getTextOperationTransient().getFrom(),
@@ -41,6 +50,15 @@ public class KafkaMessageListener {
             );
             state.removeCurrentOperationAndApplyTransformedOperation(transformedOperation);
         } else if (messageDocRevision == serverDocRevision) {
+
+            System.out.printf(
+                    "[%s] clientRevision = %d, serverRevision = %d\n Operation = %s\n",
+                    "UP_TO_DATE_MESSAGE",
+                    messageDocRevision,
+                    serverDocRevision,
+                    message.getTextOperationTransient().getOperation()
+            );
+
             simpMessagingTemplate.convertAndSend("/topic/doc/" + message.getDocId()
                     , new TextOperationResponse(
                             message.getTextOperationTransient().getFrom(),

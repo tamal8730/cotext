@@ -2,7 +2,7 @@ package com.github.tamal8730.cotext.model;
 
 public class TextOperation {
 
-    private String opName; //ins, del, id
+    private String opName; //ins, del
     private String operand;
     private int position;
 

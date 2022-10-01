@@ -92,14 +92,13 @@ class DocState {
     queueOperation(operation, newDocument, onSend) {
 
         this.setDocumentText(newDocument(this.document))
-        console.log(`DOC ${this.document} ${this.sentOperation}`)
 
         if (this.sentOperation === null) {
-            console.log(`SENT ${this.document}`)
+            console.log(`[SEND] sent operation = ${JSON.stringify(operation)}, lastSyncedRevision = ${operation.revision}`)
             onSend(operation.revision)
             this.sentOperation = operation
         } else {
-            console.log(`QUEUED ${this.document}`)
+            console.log(`[ENQ] enqueued operation = ${JSON.stringify(operation)}, lastSyncedRevision = ${this.lastSyncedRevision}`)
             this.pendingOperations.enqueue(operation)
         }
 
@@ -107,23 +106,29 @@ class DocState {
 
     transformPendingOperations(op2, newRevision) {
 
-        if (op2 === null) {
-            return
-        }
+        if (op2 === null) { return }
+        this.pendingOperations.replaceWhere((op1) => this.transformOperation(op1, op2))
 
+    }
+
+    transformOperationAgainstSentOperation(op1) {
+        if (this.sentOperation === null) return op1
+        let transformed = this.transformOperation(op1, this.sentOperation)
+        this.sentOperation = null
+        return transformed
+    }
+
+    transformOperation(op1, op2) {
+
+        let op1Name = op1.opName
         let op2Name = op2.opName
 
-        this.pendingOperations.replaceWhere((op1) => {
+        if (op1Name == "ins" && op2Name == "ins") return this.transformII(op1, op2)
+        else if (op1Name == "ins" && op2Name == "del") return this.transformID(op1, op2)
+        else if (op1Name == "del" && op2Name == "ins") return this.transformDI(op1, op2)
+        else if (op1Name == "del" && op2Name == "del") return this.transformDD(op1, op2)
+        else return null
 
-            let op1Name = op1.opName
-
-            if (op1Name == "ins" && op2Name == "ins") return this.transformII(op1, op2)
-            else if (op1Name == "ins" && op2Name == "del") return this.transformID(op1, op2)
-            else if (op1Name == "del" && op2Name == "ins") return this.transformDI(op1, op2)
-            else if (op1Name == "del" && op2Name == "del") return this.transformDD(op1, op2)
-            else return null
-
-        })
     }
 
     // insert-insert transform
@@ -201,14 +206,18 @@ function getCaretPosition(textarea) {
 
 function onOperationAcknowledged(operation, revision) {
     if (docState.lastSyncedRevision < revision) {
+
+        console.log(`[ACK] acknowledged operation = ${JSON.stringify(operation)}, revision = ${revision}`)
+
         docState.acknowledgeOperation(
             operation,
             revision,
             (pendingOperation) => {
-                console.log(`SENDING ${JSON.stringify(pendingOperation)}`)
+                console.log(`[DEQ] sending operation = ${JSON.stringify(pendingOperation)}, revision = ${revision}`)
                 sendOperation(pendingOperation)
             }
         )
+
     }
 }
 
@@ -219,7 +228,6 @@ function subscribeToDocumentUpdates(docId) {
 
         let body = message.body;
         let parsed = JSON.parse(body);
-        console.log(`Received doc ${body}`)
 
         let ack = parsed.acknowledgeTo
         let operation = parsed.operation
@@ -229,15 +237,20 @@ function subscribeToDocumentUpdates(docId) {
 
             onOperationAcknowledged(operation, revision)
 
-        } else if (operation !== null) {
+        } else {
 
             docState.transformPendingOperations(operation, revision)
             docState.lastSyncedRevision = revision
 
-            if (operation.opName === "ins") {
-                onInsert(operation.operand, operation.position, revision)
-            } else if (operation.opName === "del") {
-                onDelete(operation.operand, operation.position, revision)
+            transformedOperation = docState.transformOperationAgainstSentOperation(operation)
+            if (transformedOperation === null) return
+
+            console.log(`[APPLY] applied operation = ${JSON.stringify(transformedOperation)}, revision = ${revision}`)
+
+            if (transformedOperation.opName === "ins") {
+                onInsert(transformedOperation.operand, transformedOperation.position, revision)
+            } else if (transformedOperation.opName === "del") {
+                onDelete(transformedOperation.operand, transformedOperation.position, revision)
             }
 
         }
@@ -256,13 +269,10 @@ async function onNewDocument() {
     document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
     subscribeToDocumentUpdates(docId)
 
-    console.log(`New doc ${docId}`)
-
 }
 
 async function onDocumentJoin(id) {
 
-    console.log(`joining ${id}`)
     let response = await axios.get(`${httpProtocol}://${server}/doc/${id}`)
     let data = response.data
     docId = id
@@ -292,8 +302,6 @@ async function onConnect(client) {
 function connectOrJoin() {
 
     let url = `${wsProtocol}://${server}/relay`
-
-    console.log(`Trying to connect to ${url}`)
 
     client = Stomp.client(url)
     client.connect({}, function () { onConnect(client) })

@@ -54,11 +54,9 @@ public class DocState {
 
     public TextOperation applyTransformationsFrom(TextOperation operation, int from) {
 
-        System.out.println("TRANS_FROM " + from + " " + revisionLog+", "+operation);
-
         TextOperation transformedOperation = operation;
         for (int i = from; i < revisionLog.size(); i++) {
-            if (transformedOperation == null) continue;
+            if (transformedOperation == null) return null;
             transformedOperation = transform(transformedOperation, revisionLog.get(i));
         }
         return transformedOperation;

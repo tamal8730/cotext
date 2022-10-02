@@ -37,7 +37,7 @@ public class DocumentController {
             return DocumentJoinResponse.withError("document with id = " + id + " does not exist");
         } else {
             String newUserId = UUID.randomUUID().toString();
-            return DocumentJoinResponse.noError(newUserId, doc.getDocText());
+            return DocumentJoinResponse.noError(newUserId, doc.getDocText(), doc.getRevision());
         }
 
     }

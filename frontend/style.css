@@ -1,0 +1,82 @@
+*{
+    margin: 0;
+    padding: 0;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    box-sizing: 'border-box'
+}
+
+.hero{
+    background: #1d2026;
+    min-height: 100vh;
+    width: 100%;
+    color: #fff;
+    position: relative;
+}
+
+.shareable_link_container{
+    float: left;
+}
+
+.collaborator_count{
+    width: 100%;
+    text-align: end;
+}
+
+.header{
+
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    top: 0;
+
+    padding: 32px 15% 42px 15%;
+    background-color: #1d2026;
+    
+}
+
+.editor_container{
+    padding: 32px 15%;
+}
+
+.editor{
+    width: 100%;
+    resize: none;
+    overflow: hidden;
+    background-color: transparent;
+    color: #fff;
+    border: none;
+    outline: none;
+    font-size: 1.5rem;
+    line-height: 1.5em;
+}
+
+.text_caption{
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.shareable_link{
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.unselectable{
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+::-moz-selection { /* Code for Firefox */
+    color: black;
+    background: #aeadf0;
+  }
+  
+::selection {
+    color: black;
+    background: #aeadf0;
+}

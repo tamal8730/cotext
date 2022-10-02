@@ -7,20 +7,22 @@ public class DocumentJoinResponse {
     final public String errorMessage;
     final public String userId;
     final public String text;
+    final public int documentRevision;
 
-    private DocumentJoinResponse(boolean hasError, String errorMessage, String userId, String text) {
+    private DocumentJoinResponse(boolean hasError, String errorMessage, String userId, String text, int documentRevision) {
         this.hasError = hasError;
         this.errorMessage = errorMessage;
         this.userId = userId;
         this.text = text;
+        this.documentRevision = documentRevision;
     }
 
-    public static DocumentJoinResponse noError(String userId, String text) {
-        return new DocumentJoinResponse(false, null, userId, text);
+    public static DocumentJoinResponse noError(String userId, String text, int documentRevision) {
+        return new DocumentJoinResponse(false, null, userId, text, documentRevision);
     }
 
     public static DocumentJoinResponse withError(String errorMessage) {
-        return new DocumentJoinResponse(true, errorMessage, null, null);
+        return new DocumentJoinResponse(true, errorMessage, null, null, -1);
     }
 
 }

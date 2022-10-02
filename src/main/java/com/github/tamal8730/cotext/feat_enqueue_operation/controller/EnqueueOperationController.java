@@ -23,10 +23,7 @@ public class EnqueueOperationController {
 
     @PostMapping("/v/{id}")
     private EnqueueOperationResponse enqueue(@PathVariable String id, @RequestBody EnqueueOperationPayload operation) throws Exception {
-
-        System.out.printf("[ENQUEUED], body = %s\n", operation);
-
-        Thread.sleep(500);
+        Thread.sleep(300);
         DocumentModel doc = documentStore.getDocument(id);
         if (doc == null) {
             return new EnqueueOperationResponse("error", "document with id = " + id + " does not exist");

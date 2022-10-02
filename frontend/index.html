@@ -2,29 +2,72 @@
 <html>
 
 <head>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotext</title>
+    <link rel="stylesheet" href="style.css">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.27.2/axios.js"
-            integrity="sha512-rozBdNtS7jw9BlC76YF1FQGjz17qQ0J/Vu9ZCFIW374sEy4EZRbRcUZa2RU/MZ90X2mnLU56F75VfdToGV0RiA=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        integrity="sha512-rozBdNtS7jw9BlC76YF1FQGjz17qQ0J/Vu9ZCFIW374sEy4EZRbRcUZa2RU/MZ90X2mnLU56F75VfdToGV0RiA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"
-            integrity="sha512-tL4PIUsPy+Rks1go4kQG8M8/ItpRMvKnbBjQm4d2DQnFwgcBYRRN00QdyQnWSCwNMsoY/MfJY8nHp2CzlNdtZA=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        integrity="sha512-tL4PIUsPy+Rks1go4kQG8M8/ItpRMvKnbBjQm4d2DQnFwgcBYRRN00QdyQnWSCwNMsoY/MfJY8nHp2CzlNdtZA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script src="app.js"></script>
+
 </head>
 
 <body>
 
-<textarea id="editor" class="editor" placeholder="Write something..." cols="120" rows="120"
-          style="width: 100vw; height: 80vh; resize: none; border: none; outline: none; overflow: auto;"
-          oninput="onChangeText();"></textarea>
+    <div class="hero">
+
+        <header class="header">
+
+            <div class="shareable_link_container">
+                <h6 class="text_caption unselectable">Collaboration link</h6>
+                <h3 id="shareable_link" class="shareable_link">Generating collaboration link...</h3>
+            </div>
+
+            <div class="collaborator_count text_caption unselectable">
+                3 collaborators
+            </div>
+
+        </header>
+
+
+        <div class="editor_container">
+
+            <textarea id="editor" class="editor" placeholder="Write something..." onselectstart="return false"
+                onpaste="showError(); return false;" oncut="showError(); return false"
+                ondrag="showError(); return false" ondrop="showError(); return false" autocomplete="off"
+                oninput="onChangeText();"></textarea>
+            <script>
+
+                function showError() {
+                    alert('cut and paste is not supported by cotext currently');
+                }
+
+                const textEditor = document.getElementById("editor");
+                textEditor.addEventListener("keyup", e => {
+                    textEditor.style.height = "auto";
+                    let scrollHeight = e.target.scrollHeight;
+                    textEditor.style.height = `${scrollHeight}px`;
+                });
+
+            </script>
+
+        </div>
+
+    </div>
+
 
 
 </body>
 
-<footer>
+<!-- <footer>
     <span id="docId"> Collaborate at http://localhost:5500/doc/xyzwgva25a </span>
-</footer>
+</footer> -->
 
 </html>

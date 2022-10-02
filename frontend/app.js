@@ -1,11 +1,10 @@
-let server = "127.0.0.1:8080"
+let server = "192.168.117.244:8080"
 let httpProtocol = "http"
 let wsProtocol = "ws"
 
 let client = null
 let docId = null
 let userId = null
-
 
 
 class Queue {
@@ -266,7 +265,7 @@ async function onNewDocument() {
     docId = data.docId
     userId = data.userId
 
-    document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
+    document.getElementById("shareable_link").textContent = `${httpProtocol}://127.0.0.1:5500?id=${docId}`
     subscribeToDocumentUpdates(docId)
 
 }
@@ -281,10 +280,11 @@ async function onDocumentJoin(id) {
 
     docId = id
     userId = data.userId
+    docState.lastSyncedRevision = data.documentRevision
     docState.setDocumentText(data.text || "")
 
     document.getElementById("editor").value = docState.document
-    document.getElementById("docId").textContent = `Collaborate at ${httpProtocol}://127.0.0.1:5500?id=${docId}`
+    document.getElementById("shareable_link").textContent = `${httpProtocol}://127.0.0.1:5500?id=${docId}`
 
     subscribeToDocumentUpdates(docId)
 

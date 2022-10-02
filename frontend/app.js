@@ -275,6 +275,10 @@ async function onDocumentJoin(id) {
 
     let response = await axios.get(`${httpProtocol}://${server}/doc/${id}`)
     let data = response.data
+    let hasError = data.hasError
+
+    if (hasError) { throw 'No such document' }
+
     docId = id
     userId = data.userId
     docState.setDocumentText(data.text || "")
@@ -326,31 +330,17 @@ function sendOperation(operation) {
 
     if (operation.opName === "ins") {
 
-        axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+        axios.post(`${httpProtocol}://${server}/enqueue/v/${docId}`,
             {
                 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
                 'revision': docState.lastSyncedRevision, 'from': userId
             }
         )
 
-        // docState.queueOperation(
-        //     operation,
-        //     (currDoc) => currDoc,
-        //     async (revision) => {
-        //         await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
-        //             {
-        //                 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
-        //                 'revision': revision, 'from': userId
-        //             }
-        //         )
-        //     }
-        //     // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
-        // )
-
     } else if (operation.opName === "del") {
 
 
-        axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+        axios.post(`${httpProtocol}://${server}/enqueue/v/${docId}`,
             {
                 'operation': {
                     'opName': operation.opName,
@@ -360,24 +350,6 @@ function sendOperation(operation) {
                 'revision': docState.lastSyncedRevision, 'from': userId
             }
         )
-
-        // docState.queueOperation(
-        //     operation,
-        //     (currDoc) => currDoc,
-        //     async (revision) => {
-        //         await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
-        //             {
-        //                 'operation': {
-        //                     'opName': operation.opName,
-        //                     'operand': operation.operand,
-        //                     'position': operation.position
-        //                 },
-        //                 'revision': revision, 'from': userId
-        //             }
-        //         )
-        //     }
-        //     // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position }, 'revision': lastSyncedRevision, 'from': userId })) }
-        // )
 
     } else {
 
@@ -392,14 +364,13 @@ function sendInsertOperation(caretPosition, substring) {
         (currDoc) => insertStr(currDoc, substring, caretPosition - 1),
         async (revision) => {
             await axios.post(
-                `${httpProtocol}://${server}/send/message/${docId}`,
+                `${httpProtocol}://${server}/enqueue/v/${docId}`,
                 {
                     'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 },
                     'revision': revision, 'from': userId
                 }
             )
         }
-        // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 }, 'revision': lastSyncedRevision, 'from': userId })) }
     )
 
 }
@@ -410,14 +381,13 @@ function sendDeleteOperation(caretPosition, substring) {
         new TextOperation("del", substring, caretPosition, docState.lastSyncedRevision),
         (currDoc) => removeCharacter(currDoc, caretPosition),
         async (revision) => {
-            await axios.post(`${httpProtocol}://${server}/send/message/${docId}`,
+            await axios.post(`${httpProtocol}://${server}/enqueue/v/${docId}`,
                 {
                     'operation': { 'opName': 'del', 'operand': substring, 'position': caretPosition },
                     'revision': revision, 'from': userId
                 }
             )
         }
-        // (lastSyncedRevision) => { client.send(`/app/relay/${docId}`, {}, JSON.stringify({ 'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition }, 'revision': lastSyncedRevision, 'from': userId })) }
     )
 
 }

@@ -1,4 +1,4 @@
-package com.github.tamal8730.cotext.shared.operation_queue;
+package com.github.tamal8730.cotext.shared.operation_queue.impl;
 
 import com.github.tamal8730.cotext.feat_relay_operation.operation_relayer.OperationRelayer;
 import com.github.tamal8730.cotext.shared.document_store.DocumentStore;
@@ -6,13 +6,10 @@ import com.github.tamal8730.cotext.shared.model.DocumentModel;
 import com.github.tamal8730.cotext.shared.model.OperationQueueInPayload;
 import com.github.tamal8730.cotext.shared.model.OperationQueueOutPayload;
 import com.github.tamal8730.cotext.shared.model.TextOperation;
+import com.github.tamal8730.cotext.shared.operation_queue.OperationQueue;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Component;
 
-//@Component
-public class OperationListener {
+public class OQImpl implements OperationQueue {
 
     @Autowired
     private DocumentStore documentStore;
@@ -21,12 +18,14 @@ public class OperationListener {
     @Autowired
     private OperationRelayer operationRelayer;
 
-    @KafkaListener(topics = "docs", containerFactory = "kafkaListenerContainerFactory")
-    public void listener(OperationQueueInPayload message) {
+    @Override
+    public void enqueue(OperationQueueInPayload message) {
         DocumentModel doc = documentStore.getDocument(message.getDocId());
 
         int serverDocRevision = doc.getRevision();
         int messageDocRevision = message.getRevision();
+
+        System.out.printf("[PUSH] trying to relay %s\n", message);
 
         if (messageDocRevision < serverDocRevision) {
             // client doc version is outdated

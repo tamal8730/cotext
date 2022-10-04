@@ -48,4 +48,14 @@ public class OperationQueueInPayload {
     public void setOperation(TextOperation operation) {
         this.operation = operation;
     }
+
+    @Override
+    public String toString() {
+        return "OperationQueueInPayload{" +
+                "docId='" + docId + '\'' +
+                ", revision=" + revision +
+                ", from='" + from + '\'' +
+                ", operation=" + operation +
+                '}';
+    }
 }

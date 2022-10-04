@@ -1,4 +1,6 @@
-let server = "192.168.117.244:8080"
+let serverAddress = "127.0.0.1"
+let serverPort = "8080"
+let hostPort = "5500"
 let httpProtocol = "http"
 let wsProtocol = "ws"
 
@@ -6,64 +8,272 @@ let client = null
 let docId = null
 let userId = null
 
+document.getElementById("editor").oninput = onChangeText
+document.getElementById("editor").onpaste = onPaste
 
-class Queue {
-    constructor() {
-        this.elements = {};
-        this.head = 0;
-        this.tail = 0;
-    }
-    enqueue(element) {
-        this.elements[this.tail] = element;
-        this.tail++;
-    }
-    dequeue() {
-        const item = this.elements[this.head];
-        delete this.elements[this.head];
-        this.head++;
-        return item;
-    }
-    peek() {
-        return this.elements[this.head];
-    }
-    get length() {
-        return this.tail - this.head;
-    }
-    get isEmpty() {
-        return this.length === 0;
-    }
 
-    replaceWhere(where) {
-        for (let i = this.tail - 1; i >= this.head; i--) {
-            let newElement = where(this.elements[i])
-            if (newElement !== null) {
-                this.elements[i] = newElement
-            }
+class DequeNode {
+    constructor(val) {
+        this.val = val
+        this.next = null
+        this.prev = null
+    }
+}
+
+class Deque {
+
+    front = null
+    rear = null
+
+    enqueueFront(element) {
+        let newNode = new DequeNode(element)
+
+        if (this.front === null && this.rear === null) {
+            this.front = newNode
+            this.rear = newNode
+        } else {
+            newNode.prev = this.front
+            this.front.next = newNode
+            this.front = newNode
         }
     }
 
-}
+    enqueueRear(element) {
+        let newNode = new DequeNode(element)
+
+        if (this.front === null && this.rear === null) {
+            this.front = newNode
+            this.rear = newNode
+        } else {
+            this.rear.prev = newNode
+            newNode.next = this.rear
+            this.rear = newNode
+        }
+    }
+
+    dequeueFront() {
+
+        if (this.front === null) {
+            return null
+        }
+
+        let toRemove = this.front
+        let prev = toRemove.prev
+        toRemove.prev = null
+        if (prev === null) {
+
+            this.front = null
+            this.rear = null
+
+        } else {
+            prev.next = null
+            this.front = prev
+        }
+
+        return toRemove.val
+
+    }
+
+    modifyWhere(replaceWith) {
+        let ptr = this.front
+        while (ptr !== null && ptr !== undefined) {
+
+            let replacement = replaceWith(ptr.val)
+
+            if (replacement !== null && replacement !== undefined) {
+
+                if (replacement.constructor === Array) {
+
+                    let subqueue = new Deque()
+                    for (let i = 0; i < replacement.length; i++) {
+                        subqueue.enqueueRear(replacement[i])
+                    }
+
+                    let toRemove = ptr
+                    let prev = ptr.prev
+                    let next = ptr.next
+
+                    toRemove.prev = null
+                    toRemove.next = null
+
+                    subqueue.rear.prev = prev
+                    subqueue.front.next = next
 
 
-class TextOperation {
+                    if (prev === null) {
+                        this.rear = subqueue.rear
+                    } else {
+                        prev.next = subqueue.rear
+                    }
 
-    constructor(opName, operand, position, revision) {
-        this.opName = opName
-        this.operand = operand
-        this.position = position
-        this.revision = revision
+                    if (next === null) {
+                        this.front = subqueue.front
+                    } else {
+                        next.prev = subqueue.front
+                    }
+
+                    ptr = subqueue.rear
+
+                    delete toRemove.val
+                    delete toRemove.prev
+                    delete toRemove.next
+
+
+                } else {
+                    ptr.val = replacement
+                }
+
+            }
+
+            ptr = ptr.prev
+        }
+    }
+
+    isEmpty() {
+        return this.front === null && this.rear === null
     }
 
 }
 
+class TextOperation {
+    constructor(opName, operand, position, revision) {
+        this.opName = opName;
+        this.operand = operand;
+        this.position = position;
+        this.revision = revision;
+    }
+}
 
+class OperationTransformation {
+    static transformOperation(op1, op2) {
+        let op1Name = op1.opName;
+        let op2Name = op2.opName;
+
+        if (op1Name === 'ins' && op2Name === 'ins')
+            return OperationTransformation.transformII(op1, op2);
+        else if (op1Name === 'ins' && op2Name === 'del')
+            return OperationTransformation.transformID(op1, op2);
+        else if (op1Name === 'del' && op2Name === 'ins')
+            return OperationTransformation.transformDI(op1, op2);
+        else if (op1Name === 'del' && op2Name === 'del')
+            return OperationTransformation.transformDD(op1, op2);
+        else return null;
+    }
+
+    // insert-insert transform
+    static transformII(op1, op2) {
+        let newPos = 0;
+        if (op1.position < op2.position) {
+            newPos = op1.position;
+        } else {
+            newPos = op1.position + op2.operand.length;
+        }
+        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision);
+    }
+
+    // insert-delete
+    static transformID(op1, op2) {
+        let op2End = op2.position + op2.operand.length - 1;
+        if (op1.position <= op2.position) {
+            return new TextOperation(
+                op1.opName,
+                op1.operand,
+                op1.position,
+                op1.revision
+            );
+        } else if (op1.position > op2.position && op1.position <= op2End) {
+            return new TextOperation(
+                op1.opName,
+                op1.operand,
+                op2.position,
+                op1.revision
+            );
+        } else {
+            return new TextOperation(
+                op1.opName,
+                op1.operand,
+                op1.position - op2.operand.length,
+                op1.revision
+            );
+        }
+    }
+
+    // delete-insert
+    static transformDI(op1, op2) {
+        let op1End = op1.position + op1.operand.length - 1;
+        if (op1.position < op2.position) {
+            if (op1End < op2.position) {
+                return new TextOperation(
+                    op1.opName,
+                    op1.operand,
+                    op1.position,
+                    op1.revision
+                );
+            } else {
+                let left = op1.operand.substring(0, op2.position - op1.position);
+                let right = op1.operand.substring(left.length);
+
+                // two operations
+                return [
+                    new TextOperation(op1.opName, left, op1.position, op1.revision),
+                    new TextOperation(
+                        op1.opName,
+                        right,
+                        op1.position + left.length + op2.operand.length,
+                        op1.revision
+                    ),
+                ];
+            }
+        } else {
+            return new TextOperation(
+                op1.opName,
+                op1.operand,
+                op1.position + op2.operand.length,
+                op1.revision
+            );
+        }
+    }
+
+    // delete-delete
+    static transformDD(op1, op2) {
+        let op1End = op1.position + op1.operand.length - 1;
+        let op2End = op2.position + op2.operand.length - 1;
+
+        if (op1End < op2.position) {
+            return new TextOperation(
+                op1.opName,
+                op1.operand,
+                op1.position,
+                op1.revision
+            );
+        } else if (op1.position > op2End) {
+            return new TextOperation(
+                op1.opName,
+                op1.operand,
+                op1.position - op2.operand.length,
+                op1.revision
+            );
+        } else if (op1.position < op2.position && op1End >= op2.position) {
+            let diff = op2.position - op1.position;
+            let operand = op1.operand.substring(0, diff);
+            return new TextOperation(op1.opName, operand, op1.position, op1.revision);
+        } else if (op1.position <= op2End && op1End > op2End) {
+            let diff =
+                op1.position + op1.operand.length - (op2.position + op2.operand.length);
+            let operand = op1.operand.substring(op1.operand.length - diff);
+            return new TextOperation(op1.opName, operand, op2.position, op1.revision);
+        } else {
+            return null;
+        }
+    }
+}
 
 class DocState {
 
     constructor(onDocumentChange) {
         this.onDocumentChange = onDocumentChange
         this.sentOperation = null // operation sent to server but not yet acknowledged
-        this.pendingOperations = new Queue() // operations not yet sent to server
+        this.pendingOperations = new Deque() // operations not yet sent to server
     }
 
     lastSyncedRevision = 0
@@ -76,8 +286,8 @@ class DocState {
         this.lastSyncedRevision = newRevision
 
         // take out a pending operation
-        if (!this.pendingOperations.isEmpty) {
-            this.sentOperation = this.pendingOperations.dequeue()
+        if (!this.pendingOperations.isEmpty()) {
+            this.sentOperation = this.pendingOperations.dequeueFront()
             onPendingOperation(this.sentOperation)
         }
 
@@ -88,17 +298,18 @@ class DocState {
         this.document = text
     }
 
-    queueOperation(operation, newDocument, onSend) {
+    async queueOperation(operation, newDocument, onSend) {
 
         this.setDocumentText(newDocument(this.document))
+        console.log(`[DOC] ${this.document}`)
 
         if (this.sentOperation === null) {
-            console.log(`[SEND] sent operation = ${JSON.stringify(operation)}, lastSyncedRevision = ${operation.revision}`)
-            onSend(operation.revision)
             this.sentOperation = operation
+            console.log(`[SEND] sent operation = ${JSON.stringify(operation)}, lastSyncedRevision = ${operation.revision}`)
+            await onSend(operation, docState.lastSyncedRevision)
         } else {
             console.log(`[ENQ] enqueued operation = ${JSON.stringify(operation)}, lastSyncedRevision = ${this.lastSyncedRevision}`)
-            this.pendingOperations.enqueue(operation)
+            this.pendingOperations.enqueueRear(operation)
         }
 
     }
@@ -106,65 +317,19 @@ class DocState {
     transformPendingOperations(op2, newRevision) {
 
         if (op2 === null) { return }
-        this.pendingOperations.replaceWhere((op1) => this.transformOperation(op1, op2))
+        this.pendingOperations.modifyWhere((op1) => OperationTransformation.transformOperation(op1, op2))
 
     }
 
     transformOperationAgainstSentOperation(op1) {
         if (this.sentOperation === null) return op1
-        let transformed = this.transformOperation(op1, this.sentOperation)
+        let transformed = OperationTransformation.transformOperation(op1, this.sentOperation)
         this.sentOperation = null
         return transformed
     }
 
-    transformOperation(op1, op2) {
-
-        let op1Name = op1.opName
-        let op2Name = op2.opName
-
-        if (op1Name == "ins" && op2Name == "ins") return this.transformII(op1, op2)
-        else if (op1Name == "ins" && op2Name == "del") return this.transformID(op1, op2)
-        else if (op1Name == "del" && op2Name == "ins") return this.transformDI(op1, op2)
-        else if (op1Name == "del" && op2Name == "del") return this.transformDD(op1, op2)
-        else return null
-
-    }
-
-    // insert-insert transform
-    transformII(op1, op2) {
-        if (op1.position < op2.position) return new TextOperation(op1.opName, op1.operand, op1.position)
-        else return new TextOperation(op1.opName, op1.operand, op1.position + 1, op1.revision)
-    }
-
-
-    // insert-delete
-    transformID(op1, op2) {
-        let newPos = 0
-        if (op1.position <= op2.position) newPos = op1.position
-        else newPos = op1.position - 1
-        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision)
-    }
-
-    // delete-insert
-    transformDI(op1, op2) {
-        let newPos = 0
-        if (op1.position < op2.position) newPos = op1.position
-        else newPos = op1.position + 1
-        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision)
-    }
-
-    // delete-delete
-    transformDD(op1, op2) {
-        let newPos = 0
-        if (op1.position < op2.position) newPos = op1.position
-        else if (op1.position > op2.position) newPos = op1.position - 1
-        else return null
-        return new TextOperation(op1.opName, op1.operand, newPos, op1.revision)
-    }
-
 
 }
-
 
 
 
@@ -176,8 +341,8 @@ let docState = new DocState((newDoc) => {
 
 
 
-
 function getCaretPosition(textarea) {
+
     if (document.selection) {
         textarea.focus()
         var range = document.selection.createRange()
@@ -200,6 +365,7 @@ function getCaretPosition(textarea) {
             'end': 0
         }
     }
+
 }
 
 
@@ -213,7 +379,7 @@ function onOperationAcknowledged(operation, revision) {
             revision,
             (pendingOperation) => {
                 console.log(`[DEQ] sending operation = ${JSON.stringify(pendingOperation)}, revision = ${revision}`)
-                sendOperation(pendingOperation)
+                sendOperation(pendingOperation, docState.lastSyncedRevision)
             }
         )
 
@@ -260,19 +426,19 @@ function subscribeToDocumentUpdates(docId) {
 
 async function onNewDocument() {
 
-    let response = await axios.get(`${httpProtocol}://${server}/doc/create`)
+    let response = await axios.get(`${httpProtocol}://${serverAddress}:${serverPort}/doc/create`)
     let data = response.data
     docId = data.docId
     userId = data.userId
 
-    document.getElementById("shareable_link").textContent = `${httpProtocol}://127.0.0.1:5500?id=${docId}`
+    document.getElementById("shareable_link").textContent = `${httpProtocol}://${serverAddress}:${hostPort}?id=${docId}`
     subscribeToDocumentUpdates(docId)
 
 }
 
 async function onDocumentJoin(id) {
 
-    let response = await axios.get(`${httpProtocol}://${server}/doc/${id}`)
+    let response = await axios.get(`${httpProtocol}://${serverAddress}:${serverPort}/doc/${id}`)
     let data = response.data
     let hasError = data.hasError
 
@@ -284,7 +450,7 @@ async function onDocumentJoin(id) {
     docState.setDocumentText(data.text || "")
 
     document.getElementById("editor").value = docState.document
-    document.getElementById("shareable_link").textContent = `${httpProtocol}://127.0.0.1:5500?id=${docId}`
+    document.getElementById("shareable_link").textContent = `${httpProtocol}://${serverAddress}:${hostPort}?id=${docId}`
 
     subscribeToDocumentUpdates(docId)
 
@@ -305,116 +471,151 @@ async function onConnect(client) {
 
 function connectOrJoin() {
 
-    let url = `${wsProtocol}://${server}/relay`
+    let url = `${wsProtocol}://${serverAddress}:${serverPort}/relay`
 
     client = Stomp.client(url)
-    client.connect({}, function () { onConnect(client) })
+    client.connect({}, function (frame) {
+        onConnect(client)
+    })
 
 }
 
-function onChangeText() {
+function onPaste(param) {
 
-    let currText = document.getElementById("editor").value
-    let prevText = docState.document
-    let { start, end } = getCaretPosition(document.getElementById("editor"))
+    let editor = document.getElementById("editor")
+    let { start, end } = getCaretPosition(editor)
+    let pastedText = param.clipboardData.getData("text")
 
-    if (currText.length > prevText.length) {
-        sendInsertOperation(start, currText.substring(start - 1, start))
-    } else if (prevText.length > currText.length) {
-        sendDeleteOperation(start, prevText.substring(start, start + 1))
+    // delete selection
+    if (start !== end) {
+        let substr = editor.value.substring(start, end)
+        console.log(`[DEL] '${substr}' at ${start}`)
+        sendDeleteOperation(start, substr)
     }
 
+    // insert pasted text
+    console.log(`[INS] '${pastedText}' at ${start}`)
+    sendInsertOperation(start + 1, pastedText)
+
 }
 
-function sendOperation(operation) {
+function onChangeText(event) {
 
-    if (operation.opName === "ins") {
+    let inputType = event.inputType
 
-        axios.post(`${httpProtocol}://${server}/enqueue/v/${docId}`,
-            {
-                'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
-                'revision': docState.lastSyncedRevision, 'from': userId
-            }
-        )
+    let editor = document.getElementById("editor")
+    let currText = editor.value
+    let prevText = docState.document
+    let { start, end } = getCaretPosition(editor)
 
-    } else if (operation.opName === "del") {
+    console.log(`[CHANGE] ${inputType}`)
 
+    if (inputType === "insertText") {
 
-        axios.post(`${httpProtocol}://${server}/enqueue/v/${docId}`,
-            {
-                'operation': {
-                    'opName': operation.opName,
-                    'operand': operation.operand,
-                    'position': operation.position
-                },
-                'revision': docState.lastSyncedRevision, 'from': userId
-            }
-        )
+        // delete the selected text
+        if (currText.length <= prevText.length) {
+            let charsToDeleteAfterStart = prevText.length - currText.length
+            let substr = prevText.substring(start - 1, start + charsToDeleteAfterStart)
+            console.log(`[DEL] '${substr}' at ${start - 1}`)
+            sendDeleteOperation(start - 1, substr)
+        }
+
+        // insert the typed character
+        console.log(`[INS] '${currText.substring(start - 1, start)}' at ${start}`)
+        sendInsertOperation(start, currText.substring(start - 1, start))
+
+    } else if (inputType === "insertLineBreak") {
+
+        sendInsertOperation(start, currText.substring(start - 1, start))
+
+    } else if (inputType === "deleteByCut" || inputType === "deleteContentBackward" || inputType === "deleteContentForward") {
+
+        let charactersDeleted = prevText.length - currText.length
+        let deletedString = prevText.substring(start, start + charactersDeleted)
+        sendDeleteOperation(start, deletedString)
 
     } else {
-
+        // unsupported operation
     }
 
 }
+
+function createOperationPayload(operation, revision) {
+    return {
+        'operation': { 'opName': operation.opName, 'operand': operation.operand, 'position': operation.position },
+        'revision': revision, 'from': userId
+    }
+}
+
+
+async function sendOperation(operation, revision) {
+
+    if (operation.opName === "ins" || operation.opName === "del") {
+
+        let body = createOperationPayload(operation, revision)
+
+        console.log(`[POST] ${JSON.stringify(body)}`)
+
+        await axios.post(`${httpProtocol}://${serverAddress}:${serverPort}/enqueue/v/${docId}`, body)
+
+    } else {
+        // unsupported operation
+    }
+
+}
+
 
 function sendInsertOperation(caretPosition, substring) {
 
     docState.queueOperation(
+
         new TextOperation("ins", substring, caretPosition - 1, docState.lastSyncedRevision),
-        (currDoc) => insertStr(currDoc, substring, caretPosition - 1),
-        async (revision) => {
-            await axios.post(
-                `${httpProtocol}://${server}/enqueue/v/${docId}`,
-                {
-                    'operation': { 'opName': 'ins', 'operand': substring, 'position': caretPosition - 1 },
-                    'revision': revision, 'from': userId
-                }
-            )
-        }
+
+        (currDoc) => insertSubstring(currDoc, substring, caretPosition - 1),
+
+        async (operation, revision) => { await sendOperation(operation, revision) }
+
     )
 
 }
+
 
 function sendDeleteOperation(caretPosition, substring) {
 
     docState.queueOperation(
+
         new TextOperation("del", substring, caretPosition, docState.lastSyncedRevision),
-        (currDoc) => removeCharacter(currDoc, caretPosition),
-        async (revision) => {
-            await axios.post(`${httpProtocol}://${server}/enqueue/v/${docId}`,
-                {
-                    'operation': { 'opName': 'del', 'operand': substring, 'position': caretPosition },
-                    'revision': revision, 'from': userId
-                }
-            )
-        }
+
+        (currDoc) => removeSubstring(currDoc, caretPosition, caretPosition + substring.length),
+
+        async (operation, revision) => { await sendOperation(operation, revision) }
+
     )
 
 }
 
-function insertStr(main_string, ins_string, pos) {
+
+function insertSubstring(mainString, substring, pos) {
     if (typeof (pos) == "undefined") {
         pos = 0;
     }
-    if (typeof (ins_string) == "undefined") {
-        ins_string = '';
+    if (typeof (substring) == "undefined") {
+        substring = "";
     }
-    return main_string.slice(0, pos) + ins_string + main_string.slice(pos);
+    return mainString.slice(0, pos) + substring + mainString.slice(pos);
 }
 
-function removeCharacter(str, char_pos) {
-    part1 = str.substring(0, char_pos);
-    part2 = str.substring(char_pos + 1, str.length);
-    return (part1 + part2);
+function removeSubstring(str, start, end) {
+    return str.substring(0, start) + str.substring(end);
 }
 
 function onInsert(charSequence, position, revision) {
-    docState.setDocumentText(insertStr(docState.document, charSequence, position))
+    docState.setDocumentText(insertSubstring(docState.document, charSequence, position))
     document.getElementById("editor").value = docState.document
 }
 
 function onDelete(charSequence, position, revision) {
-    docState.setDocumentText(removeCharacter(docState.document, position))
+    docState.setDocumentText(removeSubstring(docState.document, position, charSequence.length + position))
     document.getElementById("editor").value = docState.document
 }
 

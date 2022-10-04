@@ -8,10 +8,12 @@ import com.github.tamal8730.cotext.shared.document_store.DocumentStore;
 import com.github.tamal8730.cotext.shared.document_store.impl.SimpleHashMapDocumentStore;
 import com.github.tamal8730.cotext.shared.operation_queue.OperationQueue;
 import com.github.tamal8730.cotext.shared.operation_queue.impl.KafkaOperationQueue;
+import com.github.tamal8730.cotext.shared.operation_queue.impl.OQImpl;
 import com.github.tamal8730.cotext.shared.operation_transformations.OperationTransformations;
 import com.github.tamal8730.cotext.shared.operation_transformations.impl.SimpleCharacterOperationTransformations;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
@@ -24,7 +26,7 @@ public class CotextApplication {
 
     @Bean
     public OperationQueue getOperationQueue() {
-        return new KafkaOperationQueue();
+        return new OQImpl();
     }
 
     @Bean

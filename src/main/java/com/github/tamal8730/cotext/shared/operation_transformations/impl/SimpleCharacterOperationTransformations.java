@@ -6,16 +6,17 @@ import com.github.tamal8730.cotext.shared.operation_transformations.OperationTra
 public class SimpleCharacterOperationTransformations implements OperationTransformations {
 
     @Override
-    public TextOperation transform(TextOperation op1, TextOperation op2) {
+    public TextOperation[] transform(TextOperation op1, TextOperation op2) {
 
         if (op1.getOpName().equals("ins") && op2.getOpName().equals("ins")) {
-            return transformII(op1, op2);
+            return new TextOperation[]{transformII(op1, op2)};
         } else if (op1.getOpName().equals("ins") && op2.getOpName().equals("del")) {
-            return transformID(op1, op2);
+            return new TextOperation[]{transformID(op1, op2)};
         } else if (op1.getOpName().equals("del") && op2.getOpName().equals("ins")) {
-            return transformDI(op1, op2);
+            return new TextOperation[]{transformDI(op1, op2)};
         } else if (op1.getOpName().equals("del") && op2.getOpName().equals("del")) {
-            return transformDD(op1, op2);
+            var transform = transformDD(op1, op2);
+            return transform == null ? null : new TextOperation[]{transform};
         } else {
             return null;
         }

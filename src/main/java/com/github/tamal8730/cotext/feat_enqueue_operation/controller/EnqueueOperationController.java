@@ -21,7 +21,7 @@ public class EnqueueOperationController {
     @Autowired
     private OperationQueue operationQueue;
 
-    @PostMapping("/v/{id}")
+    @PostMapping("/{id}")
     private EnqueueOperationResponse enqueue(@PathVariable String id, @RequestBody EnqueueOperationPayload operation) throws Exception {
         Thread.sleep(5000);
         DocumentModel doc = documentStore.getDocument(id);

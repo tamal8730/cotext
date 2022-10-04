@@ -578,7 +578,7 @@ async function sendOperation(operation, revision) {
 
         console.log(`[POST] ${JSON.stringify(body)}`)
 
-        await axios.post(`${httpProtocol}://${serverAddress}:${serverPort}/enqueue/v/${docId}`, body)
+        await axios.post(`${httpProtocol}://${serverAddress}:${serverPort}/enqueue/${docId}`, body)
 
     } else {
         // unsupported operation

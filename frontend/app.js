@@ -633,12 +633,25 @@ function removeSubstring(str, start, end) {
 
 function onInsert(charSequence, position, revision) {
     docState.setDocumentText(insertSubstring(docState.document, charSequence, position))
-    document.getElementById("editor").value = docState.document
+
+    let editor = document.getElementById("editor")
+    editor.value = docState.document
+
+    editor.style.height = "auto";
+    let scrollHeight = editor.scrollHeight;
+    editor.style.height = `${scrollHeight}px`;
+
 }
 
 function onDelete(charSequence, position, revision) {
     docState.setDocumentText(removeSubstring(docState.document, position, charSequence.length + position))
-    document.getElementById("editor").value = docState.document
+
+    let editor = document.getElementById("editor")
+    editor.value = docState.document
+
+    editor.style.height = "auto";
+    let scrollHeight = editor.scrollHeight;
+    editor.style.height = `${scrollHeight}px`;
 }
 
 connectOrJoin()

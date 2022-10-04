@@ -133,6 +133,14 @@ class Deque {
         return this.front === null && this.rear === null
     }
 
+    forEach(callback) {
+        let ptr = this.front
+        while (ptr !== null) {
+            callback(ptr.val)
+            ptr = ptr.prev
+        }
+    }
+
 }
 
 class TextOperation {
@@ -328,6 +336,18 @@ class DocState {
         return transformed
     }
 
+    transformOperationAgainstLocalChanges(op1) {
+        let transformed = op1
+        if (this.sentOperation !== null) {
+            transformed = OperationTransformation.transformOperation(transformed, this.sentOperation)
+        }
+        this.pendingOperations.forEach(op2 => {
+            transformed = OperationTransformation.transformOperation(transformed, op2)
+        })
+        this.sentOperation = null
+        return transformed
+    }
+
 
 }
 
@@ -407,7 +427,9 @@ function subscribeToDocumentUpdates(docId) {
             docState.transformPendingOperations(operation, revision)
             docState.lastSyncedRevision = revision
 
-            transformedOperation = docState.transformOperationAgainstSentOperation(operation)
+            // transformedOperation = docState.transformOperationAgainstSentOperation(operation)
+            transformedOperation = docState.transformOperationAgainstLocalChanges(operation)
+
             if (transformedOperation === null) return
 
             console.log(`[APPLY] applied operation = ${JSON.stringify(transformedOperation)}, revision = ${revision}`)

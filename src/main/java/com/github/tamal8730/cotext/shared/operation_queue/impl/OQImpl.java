@@ -30,16 +30,21 @@ public class OQImpl implements OperationQueue {
         if (messageDocRevision < serverDocRevision) {
             // client doc version is outdated
             // in this case, transform this message against all committed revisions after serverDocVersion
-            TextOperation transformedOperation = doc.applyTransformationsAgainstRevisionLogsFrom(message.getOperation(), messageDocRevision);
-            if (transformedOperation == null) {
+            var transformedOperations = doc.transformAgainstRevisionLogs(message.getOperation(), messageDocRevision);
+            if (transformedOperations == null || transformedOperations.isEmpty()) {
                 return;
             }
-            operationRelayer.relay(message.getDocId(), new OperationQueueOutPayload(
-                    message.getFrom(),
-                    transformedOperation,
-                    doc.getRevision() + 1
-            ));
-            doc.applyOperation(transformedOperation);
+
+            for (var operation : transformedOperations) {
+                if (operation == null) continue;
+                operationRelayer.relay(message.getDocId(), new OperationQueueOutPayload(
+                        message.getFrom(),
+                        operation,
+                        doc.getRevision() + 1
+                ));
+                doc.applyOperation(operation);
+            }
+
         } else if (messageDocRevision == serverDocRevision) {
 
             operationRelayer.relay(message.getDocId(), new OperationQueueOutPayload(

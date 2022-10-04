@@ -2,10 +2,11 @@ package com.github.tamal8730.cotext.shared.model;
 
 import com.github.tamal8730.cotext.feat_document.formatter.DocumentFormatter;
 import com.github.tamal8730.cotext.shared.operation_transformations.OperationTransformations;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 public class DocumentModel {
 
@@ -44,12 +45,52 @@ public class DocumentModel {
 
             var operations = operationTransformations.transform(transformedOperation, revisionLog.get(i));
             // TODO:
-            if (operations == null) {
-                return null;
-            }
+            if (operations == null) return null;
             transformedOperation = operations[0];
         }
         return transformedOperation;
+
+    }
+
+    public List<TextOperation> transformAgainstRevisionLogs(TextOperation operation, int from) {
+
+        class TextOperationWrapper {
+
+            final TextOperation operation;
+            final int transformFrom;
+
+            TextOperationWrapper(TextOperation operation, int transformFrom) {
+                this.operation = operation;
+                this.transformFrom = transformFrom;
+            }
+        }
+
+        List<TextOperation> transformedOperations = new ArrayList<>();
+        Queue<TextOperationWrapper> opQueue = new LinkedList<>();
+        opQueue.add(new TextOperationWrapper(operation, from));
+
+        while (!opQueue.isEmpty()) {
+
+            var op = opQueue.poll();
+            var transformedOperation = operation;
+
+            for (int revision = op.transformFrom; revision < revisionLog.size(); revision++) {
+                var operations = operationTransformations.transform(transformedOperation, revisionLog.get(revision));
+                if (operations == null || operations.length == 0) {
+                    transformedOperation = null;
+                    break;
+                }
+                transformedOperation = operations[0];
+                if (operations.length > 1) {
+                    opQueue.add(new TextOperationWrapper(operations[1], revision + 1));
+                }
+            }
+
+            transformedOperations.add(transformedOperation);
+
+        }
+
+        return transformedOperations;
 
     }
 

@@ -475,11 +475,13 @@ function subscribeToDocumentUpdates(docId) {
 }
 
 async function onNewDocument() {
-
-    let response = await axios.get(`${httpProtocol}://${serverAddress}:${serverPort}/doc/create`)
+    let response = await axios.post(`${httpProtocol}://${serverAddress}:${serverPort}/doc/create`, {
+        'userId': userId
+    })
+    // let response = await axios.get(`${httpProtocol}://${serverAddress}:${serverPort}/doc/create`)
     let data = response.data
     docId = data.docId
-    userId = data.userId
+    // userId = data.userId
 
     document.getElementById("shareable_link").textContent = `${httpProtocol}://${serverAddress}:${hostPort}?id=${docId}`
     subscribeToDocumentUpdates(docId)
@@ -487,14 +489,16 @@ async function onNewDocument() {
 
 async function onDocumentJoin(id) {
 
-    let response = await axios.get(`${httpProtocol}://${serverAddress}:${serverPort}/doc/${id}`)
+    let response = await axios.post(`${httpProtocol}://${serverAddress}:${serverPort}/doc/${id}`, {
+        'userId': userId
+    })
     let data = response.data
     let hasError = data.hasError
 
     if (hasError) { throw 'No such document' }
 
     docId = id
-    userId = data.userId
+    // userId = data.userId
     docState.lastSyncedRevision = data.documentRevision
     docState.setDocumentText(data.text || "")
 
@@ -524,7 +528,10 @@ function connectOrJoin() {
     let url = `${wsProtocol}://${serverAddress}:${serverPort}/relay`
 
     client = Stomp.client(url)
-    client.connect({ 'docId': 'eela' }, function (frame) {
+    client.connect({}, function (frame) {
+        let headers = frame.headers
+        let userName = headers["user-name"]
+        userId = userName
         onConnect(client)
     })
 

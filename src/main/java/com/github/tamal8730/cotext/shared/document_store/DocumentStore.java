@@ -23,10 +23,14 @@ public abstract class DocumentStore {
         this.documentFormatterFactory = documentFormatterFactory;
     }
 
-    public abstract DocumentModel addEmptyDocument(String docId);
+    public abstract DocumentModel addEmptyDocument(String userId, String docId);
 
-    public abstract DocumentModel getDocument(String docId);
+    public abstract DocumentModel getDocumentFromDocId(String docId);
+    public abstract DocumentModel getDocumentFromUserId(String docId);
 
     public abstract DocumentModel removeDocument(String docId);
+
+    public abstract void addCollaboratorToDocument(String userId, String docId);
+    public abstract DocumentModel removeCollaboratorFromDocument(String userId);
 
 }

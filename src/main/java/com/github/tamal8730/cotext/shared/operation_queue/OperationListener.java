@@ -21,7 +21,7 @@ public class OperationListener {
 
     @KafkaListener(topics = "docs", containerFactory = "kafkaListenerContainerFactory")
     public void listener(OperationQueueInPayload message) {
-        DocumentModel doc = documentStore.getDocument(message.getDocId());
+        DocumentModel doc = documentStore.getDocumentFromDocId(message.getDocId());
 
         int serverDocRevision = doc.getRevision();
         int messageDocRevision = message.getRevision();

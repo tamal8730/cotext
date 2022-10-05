@@ -3,10 +3,7 @@ package com.github.tamal8730.cotext.shared.model;
 import com.github.tamal8730.cotext.feat_document.formatter.DocumentFormatter;
 import com.github.tamal8730.cotext.shared.operation_transformations.OperationTransformations;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 public class DocumentModel {
 
@@ -100,8 +97,14 @@ public class DocumentModel {
         return collaboratorCount;
     }
 
-    public void addCollaborator() {
+    public int incrementCollaboratorCount() {
         collaboratorCount++;
+        return collaboratorCount;
+    }
+
+    public int decrementCollaboratorCount(){
+        collaboratorCount--;
+        return collaboratorCount;
     }
 
     public String getId() {

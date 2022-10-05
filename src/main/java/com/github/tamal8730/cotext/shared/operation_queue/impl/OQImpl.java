@@ -19,7 +19,7 @@ public class OQImpl implements OperationQueue {
 
     @Override
     public void enqueue(OperationQueueInPayload message) {
-        DocumentModel doc = documentStore.getDocument(message.getDocId());
+        DocumentModel doc = documentStore.getDocumentFromDocId(message.getDocId());
 
         int serverDocRevision = doc.getRevision();
         int messageDocRevision = message.getRevision();

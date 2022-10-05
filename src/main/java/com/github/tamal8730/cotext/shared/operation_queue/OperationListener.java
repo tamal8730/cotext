@@ -4,12 +4,10 @@ import com.github.tamal8730.cotext.feat_relay_operation.operation_relayer.Operat
 import com.github.tamal8730.cotext.shared.document_store.DocumentStore;
 import com.github.tamal8730.cotext.shared.model.DocumentModel;
 import com.github.tamal8730.cotext.shared.model.OperationQueueInPayload;
-import com.github.tamal8730.cotext.shared.model.OperationQueueOutPayload;
+import com.github.tamal8730.cotext.shared.model.message_out_payload.OperationQueueOutPayload;
 import com.github.tamal8730.cotext.shared.model.TextOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Component;
 
 //@Component
 public class OperationListener {

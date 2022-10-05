@@ -19,7 +19,7 @@ public class SimpleHashMapDocumentStore extends DocumentStore {
 
     @Override
     public DocumentModel addEmptyDocument(String docId) {
-        DocumentModel newDocState = new DocumentModel(documentFormatterFactory.get(), getOperationTransformations());
+        DocumentModel newDocState = new DocumentModel(docId, documentFormatterFactory.get(), getOperationTransformations());
         store.put(docId, newDocState);
         return newDocState;
     }

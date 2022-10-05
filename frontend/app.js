@@ -7,6 +7,7 @@ let wsProtocol = "ws"
 let client = null
 let docId = null
 let userId = null
+let collaboratorCount = 0
 
 document.getElementById("editor").oninput = onChangeText
 document.getElementById("editor").onpaste = onPaste
@@ -407,6 +408,49 @@ function onOperationAcknowledged(operation, revision) {
 }
 
 
+function handleOperation(payload) {
+
+    let ack = payload.acknowledgeTo
+    let operation = payload.operation
+    let revision = payload.revision
+
+    if (ack === userId) {
+
+        onOperationAcknowledged(operation, revision)
+
+    } else {
+
+        docState.transformPendingOperations(operation, revision)
+        docState.lastSyncedRevision = revision
+
+        // transformedOperation = docState.transformOperationAgainstSentOperation(operation)
+        transformedOperation = docState.transformOperationAgainstLocalChanges(operation)
+
+        if (transformedOperation === null) return
+
+        console.log(`[APPLY] applied operation = ${JSON.stringify(transformedOperation)}, revision = ${revision}`)
+
+        if (transformedOperation.opName === "ins") {
+            onInsert(transformedOperation.operand, transformedOperation.position, revision)
+        } else if (transformedOperation.opName === "del") {
+            onDelete(transformedOperation.operand, transformedOperation.position, revision)
+        }
+
+    }
+}
+
+
+function handleCollaboratorCount(payload) {
+    let count = payload.count;
+    setCollaboratorCount(count)
+}
+
+function setCollaboratorCount(count) {
+    collaboratorCount = count
+    document.getElementById("collaborator_count").innerText = `${count} ${count > 1 ? "collaborators" : "collaborator"}`
+}
+
+
 function subscribeToDocumentUpdates(docId) {
 
     client.subscribe(`/topic/doc/${docId}`, function (message) {
@@ -414,32 +458,16 @@ function subscribeToDocumentUpdates(docId) {
         let body = message.body;
         let parsed = JSON.parse(body);
 
-        let ack = parsed.acknowledgeTo
-        let operation = parsed.operation
-        let revision = parsed.revision
+        let type = parsed.type;
+        let payload = parsed.payload;
 
-        if (ack === userId) {
-
-            onOperationAcknowledged(operation, revision)
-
-        } else {
-
-            docState.transformPendingOperations(operation, revision)
-            docState.lastSyncedRevision = revision
-
-            // transformedOperation = docState.transformOperationAgainstSentOperation(operation)
-            transformedOperation = docState.transformOperationAgainstLocalChanges(operation)
-
-            if (transformedOperation === null) return
-
-            console.log(`[APPLY] applied operation = ${JSON.stringify(transformedOperation)}, revision = ${revision}`)
-
-            if (transformedOperation.opName === "ins") {
-                onInsert(transformedOperation.operand, transformedOperation.position, revision)
-            } else if (transformedOperation.opName === "del") {
-                onDelete(transformedOperation.operand, transformedOperation.position, revision)
-            }
-
+        switch (type) {
+            case "operation":
+                handleOperation(payload)
+                break;
+            case "collaborator_count":
+                handleCollaboratorCount(payload)
+                break
         }
 
     })
@@ -455,7 +483,6 @@ async function onNewDocument() {
 
     document.getElementById("shareable_link").textContent = `${httpProtocol}://${serverAddress}:${hostPort}?id=${docId}`
     subscribeToDocumentUpdates(docId)
-
 }
 
 async function onDocumentJoin(id) {
@@ -473,6 +500,7 @@ async function onDocumentJoin(id) {
 
     document.getElementById("editor").value = docState.document
     document.getElementById("shareable_link").textContent = `${httpProtocol}://${serverAddress}:${hostPort}?id=${docId}`
+    setCollaboratorCount(data.collaboratorCount)
 
     subscribeToDocumentUpdates(docId)
 
@@ -496,7 +524,7 @@ function connectOrJoin() {
     let url = `${wsProtocol}://${serverAddress}:${serverPort}/relay`
 
     client = Stomp.client(url)
-    client.connect({}, function (frame) {
+    client.connect({ 'docId': 'eela' }, function (frame) {
         onConnect(client)
     })
 

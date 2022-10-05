@@ -1,4 +1,6 @@
-package com.github.tamal8730.cotext.shared.model;
+package com.github.tamal8730.cotext.shared.model.message_out_payload;
+
+import com.github.tamal8730.cotext.shared.model.TextOperation;
 
 public class OperationQueueOutPayload {
 

@@ -21,6 +21,7 @@ public class EnqueueOperationController {
     @Autowired
     private OperationQueue operationQueue;
 
+
     @PostMapping("/{id}")
     private EnqueueOperationResponse enqueue(@PathVariable String id, @RequestBody EnqueueOperationPayload operation) throws Exception {
         Thread.sleep(5000);
@@ -35,6 +36,8 @@ public class EnqueueOperationController {
                     operation.getFrom(),
                     operation.getOperation())
             );
+
+
             return new EnqueueOperationResponse("ok", null);
         }
     }

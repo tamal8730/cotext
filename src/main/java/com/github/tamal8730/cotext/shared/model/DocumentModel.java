@@ -12,13 +12,15 @@ public class DocumentModel {
 
     private final OperationTransformations operationTransformations;
 
+    private final String id;
     private final DocumentFormatter documentFormatter;
     private int revision = 0;
     private int collaboratorCount = 0;
 
     final List<TextOperation> revisionLog = new ArrayList<>();
 
-    public DocumentModel(DocumentFormatter documentFormatter, OperationTransformations operationTransformations) {
+    public DocumentModel(String id, DocumentFormatter documentFormatter, OperationTransformations operationTransformations) {
+        this.id=id;
         this.documentFormatter = documentFormatter;
         this.operationTransformations = operationTransformations;
     }
@@ -98,4 +100,11 @@ public class DocumentModel {
         return collaboratorCount;
     }
 
+    public void addCollaborator() {
+        collaboratorCount++;
+    }
+
+    public String getId() {
+        return id;
+    }
 }

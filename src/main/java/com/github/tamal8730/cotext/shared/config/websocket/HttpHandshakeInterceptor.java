@@ -16,7 +16,7 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
         if (request instanceof ServletServerHttpRequest) {
             ServletServerHttpRequest servletRequest =
                     (ServletServerHttpRequest) request;
-            attributes.put("custom-header", "foo");
+//            attributes.put("custom-header", "foo");
         }
         return true;
     }

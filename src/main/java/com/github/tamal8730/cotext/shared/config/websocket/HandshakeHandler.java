@@ -16,10 +16,10 @@ public class HandshakeHandler extends DefaultHandshakeHandler {
     protected Principal determineUser(ServerHttpRequest request, WebSocketHandler wsHandler, Map<String, Object> attributes) {
         final String name;
 
-        if(!attributes.containsKey(ATTR_PRINCIPAL)){
+        if (!attributes.containsKey(ATTR_PRINCIPAL)) {
             name = UUID.randomUUID().toString();
             attributes.put(ATTR_PRINCIPAL, name);
-        }else{
+        } else {
             name = (String) attributes.get(ATTR_PRINCIPAL);
         }
         return () -> name;

@@ -10,7 +10,7 @@ public class CollaboratorCountNotifier {
     public MessagePusher messageRelayer;
 
     public void notifyCount(String docId, CollaborationCountPayload collaborationCount) {
-        messageRelayer.push("collaborator_count", docId,collaborationCount);
+        messageRelayer.push("collaborator_count", docId, collaborationCount);
     }
 
 }

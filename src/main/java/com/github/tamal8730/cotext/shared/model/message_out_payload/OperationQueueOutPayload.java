@@ -8,7 +8,7 @@ public class OperationQueueOutPayload {
     private TextOperation operation;
     private long revision;
 
-    public OperationQueueOutPayload( String acknowledgeTo, TextOperation operation, long revision) {
+    public OperationQueueOutPayload(String acknowledgeTo, TextOperation operation, long revision) {
         this.acknowledgeTo = acknowledgeTo;
         this.operation = operation;
         this.revision = revision;

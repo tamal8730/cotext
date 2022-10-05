@@ -13,16 +13,16 @@ public class SimpleHashMapDocumentStore extends DocumentStore {
     private final ConcurrentHashMap<String, DocumentModel> store = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> userIdToDocIdMap = new ConcurrentHashMap<>();
 
+    public SimpleHashMapDocumentStore(Supplier<DocumentFormatter> documentFormatterFactory) {
+        super(documentFormatterFactory);
+    }
+
     @Override
     public String toString() {
         return "SimpleHashMapDocumentStore{" +
                 "store=" + store +
                 ", userIdToDocIdMap=" + userIdToDocIdMap +
                 '}';
-    }
-
-    public SimpleHashMapDocumentStore(Supplier<DocumentFormatter> documentFormatterFactory) {
-        super(documentFormatterFactory);
     }
 
     @Override

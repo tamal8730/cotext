@@ -3,21 +3,22 @@ package com.github.tamal8730.cotext.shared.model;
 import com.github.tamal8730.cotext.feat_document.formatter.DocumentFormatter;
 import com.github.tamal8730.cotext.shared.operation_transformations.OperationTransformations;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 public class DocumentModel {
 
+    final List<TextOperation> revisionLog = new ArrayList<>();
     private final OperationTransformations operationTransformations;
-
     private final String id;
     private final DocumentFormatter documentFormatter;
     private int revision = 0;
     private int collaboratorCount = 0;
 
-    final List<TextOperation> revisionLog = new ArrayList<>();
-
     public DocumentModel(String id, DocumentFormatter documentFormatter, OperationTransformations operationTransformations) {
-        this.id=id;
+        this.id = id;
         this.documentFormatter = documentFormatter;
         this.operationTransformations = operationTransformations;
     }
@@ -34,21 +35,6 @@ public class DocumentModel {
         documentFormatter.applyOperation(operation);
         revisionLog.add(revision, operation);
         revision++;
-    }
-
-    public TextOperation applyTransformationsAgainstRevisionLogsFrom(TextOperation operation, int from) {
-
-        TextOperation transformedOperation = operation;
-        for (int i = from; i < revisionLog.size(); i++) {
-            if (transformedOperation == null) return null;
-
-            var operations = operationTransformations.transform(transformedOperation, revisionLog.get(i));
-            // TODO:
-            if (operations == null) return null;
-            transformedOperation = operations[0];
-        }
-        return transformedOperation;
-
     }
 
     public List<TextOperation> transformAgainstRevisionLogs(TextOperation operation, int from) {
@@ -102,7 +88,7 @@ public class DocumentModel {
         return collaboratorCount;
     }
 
-    public int decrementCollaboratorCount(){
+    public int decrementCollaboratorCount() {
         collaboratorCount--;
         return collaboratorCount;
     }

@@ -10,27 +10,28 @@ import java.util.function.Supplier;
 
 public abstract class DocumentStore {
 
+    final public Supplier<DocumentFormatter> documentFormatterFactory;
     @Autowired
     private OperationTransformations operationTransformations;
-
-    public OperationTransformations getOperationTransformations() {
-        return operationTransformations;
-    }
-
-    final public Supplier<DocumentFormatter> documentFormatterFactory;
 
     public DocumentStore(Supplier<DocumentFormatter> documentFormatterFactory) {
         this.documentFormatterFactory = documentFormatterFactory;
     }
 
+    public OperationTransformations getOperationTransformations() {
+        return operationTransformations;
+    }
+
     public abstract DocumentModel addEmptyDocument(String userId, String docId);
 
     public abstract DocumentModel getDocumentFromDocId(String docId);
+
     public abstract DocumentModel getDocumentFromUserId(String docId);
 
     public abstract DocumentModel removeDocument(String docId);
 
     public abstract void addCollaboratorToDocument(String userId, String docId);
+
     public abstract DocumentModel removeCollaboratorFromDocument(String userId);
 
 }

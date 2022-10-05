@@ -11,8 +11,6 @@ import com.github.tamal8730.cotext.shared.model.message_out_payload.Collaboratio
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/doc")
 @CrossOrigin

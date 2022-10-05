@@ -6,7 +6,7 @@ import com.github.tamal8730.cotext.feat_relay_operation.operation_relayer.Operat
 import com.github.tamal8730.cotext.shared.document_store.DocumentStore;
 import com.github.tamal8730.cotext.shared.document_store.impl.SimpleHashMapDocumentStore;
 import com.github.tamal8730.cotext.shared.operation_queue.OperationQueue;
-import com.github.tamal8730.cotext.shared.operation_queue.impl.OQImpl;
+import com.github.tamal8730.cotext.shared.operation_queue.impl.OperationQueueImpl;
 import com.github.tamal8730.cotext.shared.operation_transformations.OperationTransformations;
 import com.github.tamal8730.cotext.shared.operation_transformations.impl.CharSequenceOperationTransformations;
 import org.springframework.boot.SpringApplication;
@@ -16,9 +16,13 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class CotextApplication {
 
+    public static void main(String[] args) {
+        SpringApplication.run(CotextApplication.class, args);
+    }
+
     @Bean
     public OperationQueue getOperationQueue() {
-        return new OQImpl();
+        return new OperationQueueImpl();
     }
 
     @Bean
@@ -39,10 +43,6 @@ public class CotextApplication {
     @Bean
     public CollaboratorCountNotifier getCollaboratorCountNotifier() {
         return new CollaboratorCountNotifier();
-    }
-
-    public static void main(String[] args) {
-        SpringApplication.run(CotextApplication.class, args);
     }
 
 }

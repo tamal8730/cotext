@@ -8,11 +8,10 @@ import com.github.tamal8730.cotext.shared.model.message_out_payload.OperationQue
 import com.github.tamal8730.cotext.shared.operation_queue.OperationQueue;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public class OQImpl implements OperationQueue {
+public class OperationQueueImpl implements OperationQueue {
 
     @Autowired
     private DocumentStore documentStore;
-
 
     @Autowired
     private OperationRelayer operationRelayer;
@@ -23,8 +22,6 @@ public class OQImpl implements OperationQueue {
 
         int serverDocRevision = doc.getRevision();
         int messageDocRevision = message.getRevision();
-
-//        System.out.printf("[PUSH] trying to relay %s\n", message);
 
         if (messageDocRevision < serverDocRevision) {
             // client doc version is outdated

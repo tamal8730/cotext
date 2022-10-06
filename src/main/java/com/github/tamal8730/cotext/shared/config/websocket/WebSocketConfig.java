@@ -20,7 +20,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/relay")
                 .addInterceptors(new HandshakeInterceptorImpl(documentStore))
                 .setHandshakeHandler(new HandshakeHandler())
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("http://localhost:5500", "http://127.0.0.1:5500");
     }
 
     @Override

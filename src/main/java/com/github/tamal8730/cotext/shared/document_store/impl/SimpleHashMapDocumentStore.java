@@ -55,7 +55,6 @@ public class SimpleHashMapDocumentStore extends DocumentStore {
         int newCount = doc.decrementCollaboratorCount();
         if (newCount == 0) {
             removeDocument(doc.getId());
-            System.out.printf("[REMOVED] Removed document %s", doc.getId());
         }
         return doc;
     }

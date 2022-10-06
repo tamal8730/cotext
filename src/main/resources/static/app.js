@@ -1,6 +1,7 @@
 (function () {
 
     let origin = window.location.origin
+    let host = window.location.host
 
     let docId = null
     let userId = null
@@ -103,7 +104,7 @@
         if (collaboratorCount === 1) {
             text = "You +1 collaborator";
         } else if (collaboratorCount > 1) {
-            text = `You +${collaboratorCount} collaborators`;
+            text = `You + ${collaboratorCount} collaborators`;
         }
         document.getElementById("collaborator_count").innerText = text
     }
@@ -133,7 +134,7 @@
     }
 
     async function onNewDocument(client) {
-        let response = await axios.post(`${serverConfig.restProtocol}://${serverConfig.serverAddress}:${serverConfig.serverPort}/doc/create`, {
+        let response = await axios.post(`${origin}/doc/create`, {
             'userId': userId
         })
         // let response = await axios.get(`${httpProtocol}://${serverAddress}:${serverPort}/doc/create`)
@@ -147,7 +148,7 @@
 
     async function onDocumentJoin(client, id) {
 
-        let response = await axios.post(`${serverConfig.restProtocol}://${serverConfig.serverAddress}:${serverConfig.serverPort}/doc/${id}`, {
+        let response = await axios.post(`${origin}/doc/${id}`, {
             'userId': userId
         })
         let data = response.data
@@ -184,7 +185,7 @@
         let urlParams = new URLSearchParams(currUrl)
         let id = urlParams.get("id")
 
-        let url = `${serverConfig.websocketProtocol}://${serverConfig.serverAddress}:${serverConfig.serverPort}/relay${id ? `?id=${id}` : ""}`
+        let url = `${serverConfig.websocketProtocol}://${host}/relay${id ? `?id=${id}` : ""}`
 
 
         let client = Stomp.client(url)
@@ -285,7 +286,7 @@
 
             console.log(`[POST] ${JSON.stringify(body)}`)
 
-            await axios.post(`${serverConfig.restProtocol}://${serverConfig.serverAddress}:${serverConfig.serverPort}/enqueue/${docId}`, body)
+            await axios.post(`${origin}/enqueue/${docId}`, body)
 
         } else {
             // unsupported operation

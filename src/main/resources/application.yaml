@@ -1,1 +1,5 @@
-server.port: 9390
+server:
+  port: 9390
+
+ws:
+  allowed_origin: ${WS_ALLOWED_ORIGIN}

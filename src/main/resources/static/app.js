@@ -1,6 +1,7 @@
 (function () {
 
     let origin = window.location.origin
+    let wsprotocol = window.location.protocol === "https" ? "wss" : "ws"
     let host = window.location.host
 
     let docId = null
@@ -185,7 +186,7 @@
         let urlParams = new URLSearchParams(currUrl)
         let id = urlParams.get("id")
 
-        let url = `${serverConfig.websocketProtocol}://${host}/relay${id ? `?id=${id}` : ""}`
+        let url = `${wsprotocol}://${host}/relay${id ? `?id=${id}` : ""}`
 
 
         let client = Stomp.client(url)
@@ -202,7 +203,7 @@
             },
 
             (err) => {
-                document.getElementById("hero").innerHTML = `<p>404<br>The requested page was not found<br>Also, sorry for awful error page :(</p>`
+                document.getElementById("hero").innerHTML = `<p>404<br>The requested page was not found<br>Also, sorry for this awful error page :(</p>`
             },
 
         )

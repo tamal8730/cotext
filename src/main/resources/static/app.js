@@ -1,7 +1,7 @@
 (function () {
 
     let origin = window.location.origin
-    let wsprotocol = window.location.protocol === "https" ? "wss" : "ws"
+    let wsprotocol = window.location.protocol === "https:" ? "wss" : "ws"
     let host = window.location.host
 
     let docId = null

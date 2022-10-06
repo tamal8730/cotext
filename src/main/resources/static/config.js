@@ -1,6 +1,6 @@
 const serverConfig = {
     "serverPort": 9390,
-    "serverAddress": "localhost",
-    "websocketProtocol": "ws",
-    "restProtocol": "http"
+    "serverAddress": "cotext.herokuapp.com",
+    "websocketProtocol": "wss",
+    "restProtocol": "https"
 }

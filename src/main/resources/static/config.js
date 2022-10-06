@@ -1,4 +1,4 @@
 const serverConfig = {
-    "websocketProtocol": "ws",
-    "restProtocol": "http"
+    "websocketProtocol": "wss",
+    "restProtocol": "https"
 }

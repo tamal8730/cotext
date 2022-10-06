@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:5500"})
 @RequestMapping("/enqueue")
 public class EnqueueOperationController {
 

@@ -61,6 +61,11 @@ public class SimpleHashMapDocumentStore extends DocumentStore {
     }
 
     @Override
+    public boolean hasDocument(String docId) {
+        return store.containsKey(docId);
+    }
+
+    @Override
     public DocumentModel getDocumentFromUserId(String userId) {
         return store.get(userIdToDocIdMap.get(userId));
     }

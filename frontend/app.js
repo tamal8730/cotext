@@ -446,8 +446,14 @@ function handleCollaboratorCount(payload) {
 }
 
 function setCollaboratorCount(count) {
-    collaboratorCount = count
-    document.getElementById("collaborator_count").innerText = `${count} ${count > 1 ? "collaborators" : "collaborator"}`
+    collaboratorCount = count - 1
+    let text = ""
+    if (collaboratorCount === 1) {
+        text = "You +1 collaborator";
+    } else if (collaboratorCount > 1) {
+        text = `You +${collaboratorCount} collaborators`;
+    }
+    document.getElementById("collaborator_count").innerText = text
 }
 
 
@@ -510,29 +516,30 @@ async function onDocumentJoin(id) {
 
 }
 
-async function onConnect(client) {
+async function onConnect(client, id) {
 
-    let currUrl = window.location.search
-    let url = new URLSearchParams(currUrl)
-    let id = url.get("id")
     if (!id) {
         await onNewDocument() // new document
     } else {
-        await onDocumentJoin(id) // join document with id=id
+        await onDocumentJoin(id) // join document with docId=id
     }
 
 }
 
 function connectOrJoin() {
 
-    let url = `${wsProtocol}://${serverAddress}:${serverPort}/relay`
+    let currUrl = window.location.search
+    let urlParams = new URLSearchParams(currUrl)
+    let id = urlParams.get("id")
+
+    let url = `${wsProtocol}://${serverAddress}:${serverPort}/relay${id ? `?id=${id}` : ""}`
 
     client = Stomp.client(url)
     client.connect({}, function (frame) {
         let headers = frame.headers
         let userName = headers["user-name"]
         userId = userName
-        onConnect(client)
+        onConnect(client, id)
     })
 
 }

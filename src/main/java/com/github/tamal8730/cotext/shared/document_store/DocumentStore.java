@@ -34,4 +34,6 @@ public abstract class DocumentStore {
 
     public abstract DocumentModel removeCollaboratorFromDocument(String userId);
 
+    public abstract boolean hasDocument(String docId);
+
 }

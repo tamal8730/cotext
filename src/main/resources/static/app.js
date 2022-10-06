@@ -47,13 +47,10 @@
     function onOperationAcknowledged(operation, revision) {
         if (docState.lastSyncedRevision < revision) {
 
-            console.log(`[ACK] acknowledged operation = ${JSON.stringify(operation)}, revision = ${revision}`)
-
             docState.acknowledgeOperation(
                 operation,
                 revision,
                 (pendingOperation) => {
-                    console.log(`[DEQ] sending operation = ${JSON.stringify(pendingOperation)}, revision = ${revision}`)
                     sendOperation(pendingOperation, docState.lastSyncedRevision)
                 }
             )
@@ -81,8 +78,6 @@
             transformedOperation = docState.transformOperationAgainstLocalChanges(operation)
 
             if (transformedOperation === null) return
-
-            console.log(`[APPLY] applied operation = ${JSON.stringify(transformedOperation)}, revision = ${revision}`)
 
             if (transformedOperation.opName === "ins") {
                 onInsert(transformedOperation.operand, transformedOperation.position, revision)
@@ -196,7 +191,6 @@
 
             (frame) => {
                 let headers = frame.headers
-                console.log(headers)
                 let userName = headers["user-name"]
                 userId = userName
                 onConnect(client, id)
@@ -220,12 +214,10 @@
         // delete selection
         if (start !== end) {
             let substr = editor.value.substring(start, end)
-            console.log(`[DEL] '${substr}' at ${start}`)
             sendDeleteOperation(start, substr)
         }
 
         // insert pasted text
-        console.log(`[INS] '${pastedText}' at ${start}`)
         sendInsertOperation(start + 1, pastedText)
 
     }
@@ -239,20 +231,16 @@
         let prevText = docState.document
         let { start, end } = getCaretPosition(editor)
 
-        console.log(`[CHANGE] ${inputType}`)
-
-        if (inputType === "insertText") {
+        if (inputType === "insertText" || inputType === "insertCompositionText") {
 
             // delete the selected text
             if (currText.length <= prevText.length) {
                 let charsToDeleteAfterStart = prevText.length - currText.length
                 let substr = prevText.substring(start - 1, start + charsToDeleteAfterStart)
-                console.log(`[DEL] '${substr}' at ${start - 1}`)
                 sendDeleteOperation(start - 1, substr)
             }
 
             // insert the typed character
-            console.log(`[INS] '${currText.substring(start - 1, start)}' at ${start}`)
             sendInsertOperation(start, currText.substring(start - 1, start))
 
         } else if (inputType === "insertLineBreak") {
@@ -284,8 +272,6 @@
         if (operation.opName === "ins" || operation.opName === "del") {
 
             let body = createOperationPayload(operation, revision)
-
-            console.log(`[POST] ${JSON.stringify(body)}`)
 
             await axios.post(`${origin}/enqueue/${docId}`, body)
 
